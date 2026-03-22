@@ -29,7 +29,15 @@ const VideoSchema = new mongoose.Schema({
         url: String,
         type: { type: String, enum: ['pdf', 'link'], default: 'pdf' }
     }],
+    duration: {
+        type: Number,   // seconds
+        default: 0
+    },
     views: {
+        type: Number,
+        default: 0
+    },
+    shares: {
         type: Number,
         default: 0
     },
@@ -37,6 +45,20 @@ const VideoSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
+    subject: {
+        type: String,
+        default: 'General',
+        enum: [
+            'General', 'Mathematics', 'Science', 'Physics', 'Chemistry', 'Biology',
+            'Programming', 'Computer Science', 'Artificial Intelligence',
+            'Technology', 'Engineering', 'Data Science',
+            'History', 'Geography', 'Social Studies',
+            'English', 'Literature', 'Language',
+            'Business', 'Economics', 'Commerce',
+            'Design', 'Arts', 'Music',
+            'Medical', 'Law', 'Psychology'
+        ]
+    },
     createdAt: {
         type: Date,
         default: Date.now

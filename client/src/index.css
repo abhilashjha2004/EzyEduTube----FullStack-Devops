@@ -1,63 +1,196 @@
+/* ── Google Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+
 :root {
-  /* Default is now the Dark Theme (Premium Midnight) */
-  --background: 224 71% 4%;
-  --foreground: 210 40% 98%;
+  /* Light mode tokens */
+  --background: 0 0% 98%;
+  --foreground: 222 47% 11%;
 
-  --card: 224 71% 6%;
-  --card-foreground: 210 40% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
 
-  --popover: 224 71% 4%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
 
-  --primary: 263.4 70% 50.4%;
-  /* Vibrant Purple/Violet */
-  --primary-foreground: 210 40% 98%;
+  --primary: 12 100% 55%;
+  /* Vibrant red-orange */
+  --primary-foreground: 0 0% 100%;
 
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 262 83% 58%;
+  /* Electric violet */
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 199 89% 48%;
+  /* Cyan accent */
+  --accent-foreground: 0 0% 100%;
 
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
 
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 263.4 70% 50.4%;
-
-  --radius: 0.75rem;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 12 100% 55%;
+  --radius: 0.875rem;
 }
 
 .dark {
-  /* Ensure these match root for consistency */
-  --background: 224 71% 4%;
-  --foreground: 210 40% 98%;
-  --card: 224 71% 6%;
-  --card-foreground: 210 40% 98%;
-  --popover: 224 71% 4%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 263.4 70% 50.4%;
-  --primary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
+  --background: 222 47% 5%;
+  --foreground: 210 40% 96%;
+
+  --card: 222 47% 7%;
+  --card-foreground: 210 40% 96%;
+
+  --popover: 222 47% 5%;
+  --popover-foreground: 210 40% 96%;
+
+  --primary: 12 100% 58%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 262 83% 65%;
+  --secondary-foreground: 0 0% 100%;
+
+  --accent: 199 89% 52%;
+  --accent-foreground: 0 0% 100%;
+
+  --muted: 222 47% 11%;
+  --muted-foreground: 215 20% 55%;
+
+  --border: 222 47% 12%;
+  --input: 222 47% 12%;
+  --ring: 12 100% 58%;
 }
 
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
   }
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+/* ── Gradient text utility ── */
+.gradient-text {
+  background: linear-gradient(135deg, #ff4e00, #ec9f05, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Card hover glow ── */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px -8px rgba(255, 78, 0, 0.25);
+}
+
+/* ── Animated gradient background for hero areas ── */
+.gradient-bg {
+  background: linear-gradient(-45deg, #ff4e00, #ec9f05, #a855f7, #06b6d4);
+  background-size: 400% 400%;
+  animation: gradientShift 8s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ── Chip / badge pulse on active ── */
+.chip-active {
+  position: relative;
+  overflow: hidden;
+}
+
+.chip-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Sidebar icon glow on active ── */
+.sidebar-active-icon {
+  filter: drop-shadow(0 0 6px rgba(255, 78, 0, 0.6));
+}
+
+/* ── Video card thumbnail overlay gradient ── */
+.thumb-overlay {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 60%);
+}
+
+/* ── Smooth page transitions ── */
+.page-enter {
+  animation: pageIn 0.35s ease;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

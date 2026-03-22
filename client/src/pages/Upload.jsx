@@ -1,8 +1,20 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Upload as UploadIcon, X, FileText, Image as ImageIcon, Link as LinkIcon, AlertCircle } from 'lucide-react';
+import { Upload as UploadIcon, X, FileText, Image as ImageIcon, Link as LinkIcon, AlertCircle, BookOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+
+// ── Must match server/models/Video.js enum exactly ──────────────────
+const SUBJECT_OPTIONS = [
+    { group: 'General', options: ['General'] },
+    { group: 'STEM', options: ['Mathematics', 'Science', 'Physics', 'Chemistry', 'Biology'] },
+    { group: 'Computing', options: ['Programming', 'Computer Science', 'Artificial Intelligence', 'Data Science'] },
+    { group: 'Engineering', options: ['Technology', 'Engineering'] },
+    { group: 'Humanities', options: ['History', 'Geography', 'Social Studies', 'English', 'Literature', 'Language'] },
+    { group: 'Commerce', options: ['Business', 'Economics', 'Commerce'] },
+    { group: 'Creative', options: ['Design', 'Arts', 'Music'] },
+    { group: 'Professional', options: ['Medical', 'Law', 'Psychology'] },
+];
 
 const Upload = () => {
     const { user } = useAuth();
@@ -10,23 +22,33 @@ const Upload = () => {
     const [loading, setLoading] = useState(false);
 
     // Form States
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [subject, setSubject] = useState('General');
     const [uploadMode, setUploadMode] = useState('video'); // 'video' or 'link'
 
     // Video Mode
     const [videoFile, setVideoFile] = useState(null);
 
     // Link Mode
-    const [externalLink, setExternalLink] = useState("");
+    const [externalLink, setExternalLink] = useState('');
 
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [resources, setResources] = useState([]);
-    const [error, setError] = useState("");
+    const [error, setError] = useState('');
 
     const handleFileChange = (e, setter) => {
         if (e.target.files[0]) setter(e.target.files[0]);
     };
+
+    // Read the actual duration from the video file using HTML5 metadata
+    const getVideoDuration = (file) => new Promise((resolve) => {
+        const vid = document.createElement('video');
+        vid.preload = 'metadata';
+        vid.onloadedmetadata = () => { window.URL.revokeObjectURL(vid.src); resolve(Math.round(vid.duration)); };
+        vid.onerror = () => resolve(0);
+        vid.src = window.URL.createObjectURL(file);
+    });
 
     const handleResourceChange = (e) => {
         const files = Array.from(e.target.files);
@@ -39,20 +61,22 @@ const Upload = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError("");
+        setError('');
 
-        if (!title) return setError("Title is required");
-
-        if (uploadMode === 'video' && !videoFile) return setError("Please select a video file.");
-        if (uploadMode === 'link' && !externalLink) return setError("Please enter a valid link.");
+        if (!title) return setError('Title is required');
+        if (uploadMode === 'video' && !videoFile) return setError('Please select a video file.');
+        if (uploadMode === 'link' && !externalLink) return setError('Please enter a valid link.');
 
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', description);
+        formData.append('subject', subject);
         formData.append('isExternal', uploadMode === 'link');
 
         if (uploadMode === 'video') {
             formData.append('video', videoFile);
+            const dur = await getVideoDuration(videoFile);
+            if (dur > 0) formData.append('duration', dur);
         } else {
             formData.append('externalLink', externalLink);
         }
@@ -72,7 +96,7 @@ const Upload = () => {
             navigate('/');
         } catch (err) {
             console.error(err);
-            setError(err.response?.data?.message || "Upload failed. Please try again.");
+            setError(err.response?.data?.message || 'Upload failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -110,11 +134,43 @@ const Upload = () => {
                     <div>
                         <label className="block text-sm font-medium mb-1">Description</label>
                         <textarea
-                            className="w-full p-3 rounded-lg border bg-zinc-50 dark:bg-zinc-900/50 dark:border-zinc-700 h-32 focus:ring-2 focus:ring-red-500 outline-none transition"
+                            className="w-full p-3 rounded-lg border bg-zinc-50 dark:bg-zinc-900/50 dark:border-zinc-700 h-28 focus:ring-2 focus:ring-red-500 outline-none transition resize-none"
                             value={description}
                             onChange={e => setDescription(e.target.value)}
                             placeholder="Describe your content..."
                         />
+                    </div>
+                </div>
+
+                {/* ── Subject / Stream Picker ─────────────────────────── */}
+                <div>
+                    <label className="block text-sm font-medium mb-2 flex items-center gap-1.5">
+                        <BookOpen size={15} className="text-orange-500" />
+                        Subject / Stream
+                        <span className="text-xs text-zinc-400 font-normal">(used for filtering on the home page)</span>
+                    </label>
+                    <select
+                        value={subject}
+                        onChange={e => setSubject(e.target.value)}
+                        className="w-full p-3 rounded-lg border bg-zinc-50 dark:bg-zinc-900
+                                   dark:border-zinc-700 focus:ring-2 focus:ring-orange-400
+                                   outline-none transition text-sm text-zinc-800 dark:text-zinc-200
+                                   cursor-pointer"
+                    >
+                        {SUBJECT_OPTIONS.map(({ group, options }) => (
+                            <optgroup key={group} label={`── ${group} ──`}>
+                                {options.map(opt => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                            </optgroup>
+                        ))}
+                    </select>
+                    {/* Subject badge preview */}
+                    <div className="mt-2 flex items-center gap-1.5">
+                        <span className="text-xs text-zinc-400">Tag preview:</span>
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
+                            {subject}
+                        </span>
                     </div>
                 </div>
 
@@ -125,16 +181,14 @@ const Upload = () => {
                         <button
                             type="button"
                             onClick={() => setUploadMode('video')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${uploadMode === 'video' ? 'bg-white dark:bg-zinc-600 shadow text-black dark:text-white' : 'text-zinc-500'
-                                }`}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${uploadMode === 'video' ? 'bg-white dark:bg-zinc-600 shadow text-black dark:text-white' : 'text-zinc-500'}`}
                         >
                             Upload Video
                         </button>
                         <button
                             type="button"
                             onClick={() => setUploadMode('link')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${uploadMode === 'link' ? 'bg-white dark:bg-zinc-600 shadow text-black dark:text-white' : 'text-zinc-500'
-                                }`}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${uploadMode === 'link' ? 'bg-white dark:bg-zinc-600 shadow text-black dark:text-white' : 'text-zinc-500'}`}
                         >
                             External Link
                         </button>
@@ -216,9 +270,14 @@ const Upload = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="w-full py-3 bg-gradient-to-r from-red-600 to-orange-500 hover:opacity-90 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
                     >
-                        {loading ? 'Publishing...' : 'Publish to EDU-HUB'}
+                        {loading ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                Publishing...
+                            </>
+                        ) : 'Publish to EzyEduTube'}
                     </button>
                     <p className="text-center text-xs text-zinc-400 mt-4">By publishing, you verify this content is educational and relevant.</p>
                 </div>

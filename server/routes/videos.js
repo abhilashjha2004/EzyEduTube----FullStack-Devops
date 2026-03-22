@@ -7,6 +7,16 @@ const Comment = require('../models/Comment');
 const User = require('../models/User');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const authMiddleware = require('../middleware/authMiddleware');
+const isAdmin = require('../middleware/isAdmin');
+const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 // Multer Storage
 const storage = multer.diskStorage({
@@ -112,27 +122,13 @@ router.get('/:id', async (req, res) => {
 });
 
 // UPLOAD VIDEO (Local OR External)
-router.post('/upload', upload.fields([
+router.post('/upload', authMiddleware, upload.fields([
     { name: 'video', maxCount: 1 },
     { name: 'thumbnail', maxCount: 1 },
     { name: 'resources', maxCount: 5 }
 ]), async (req, res) => {
     try {
-        let uploaderId = req.body.userId;
-
-        // Fallback for demo
-        if (!uploaderId || uploaderId === "undefined") {
-            const user = await User.findOne();
-            if (user) uploaderId = user._id;
-        }
-
-        if (!uploaderId) return res.status(401).json({ message: "Unauthorized (No User)" });
-
-        // Validate ID
-        const mongoose = require('mongoose');
-        if (!mongoose.Types.ObjectId.isValid(uploaderId)) {
-            return res.status(400).json({ message: "Invalid Session: Please LOGOUT and Register again." });
-        }
+        const uploaderId = req.user.id;
 
         const isExternal = req.body.isExternal === 'true';
         const videoFile = req.files['video'] ? req.files['video'][0] : null;
@@ -168,7 +164,6 @@ router.post('/upload', upload.fields([
 
             if (!result.allowed) {
                 // Delete the uploaded file immediately
-                const fs = require('fs');
                 if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
                 if (req.files['thumbnail']) fs.unlinkSync(req.files['thumbnail'][0].path);
 
@@ -177,20 +172,46 @@ router.post('/upload', upload.fields([
                 });
             }
 
-            videoUrl = `http://localhost:5000/uploads/${videoFile.filename}`;
+            // Upload to Cloudinary securely AFTER AI Approval
+            try {
+                const videoUpload = await cloudinary.uploader.upload(videoFile.path, { resource_type: 'video', folder: 'ezyedutube_videos' });
+                videoUrl = videoUpload.secure_url;
+                if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
+            } catch (err) {
+                if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
+                return res.status(500).json({ message: "Failed to upload video to cloud." });
+            }
         }
 
         const thumbnailFile = req.files['thumbnail'] ? req.files['thumbnail'][0] : null;
-        const thumbnailUrl = thumbnailFile ? `http://localhost:5000/uploads/${thumbnailFile.filename}` : "";
+        let thumbnailUrl = "";
+        
+        if (thumbnailFile) {
+            try {
+                const thumbUpload = await cloudinary.uploader.upload(thumbnailFile.path, { resource_type: 'image', folder: 'ezyedutube_thumbnails' });
+                thumbnailUrl = thumbUpload.secure_url;
+                if (fs.existsSync(thumbnailFile.path)) fs.unlinkSync(thumbnailFile.path);
+            } catch (err) {
+                if (fs.existsSync(thumbnailFile.path)) fs.unlinkSync(thumbnailFile.path);
+            }
+        }
 
         // Process resources
         let resources = [];
         if (req.files['resources']) {
-            resources = req.files['resources'].map(file => ({
-                title: file.originalname,
-                url: `http://localhost:5000/uploads/${file.filename}`,
-                type: 'pdf'
-            }));
+            for (const file of req.files['resources']) {
+                try {
+                    const resUpload = await cloudinary.uploader.upload(file.path, { resource_type: 'raw', folder: 'ezyedutube_resources' });
+                    resources.push({
+                        title: file.originalname,
+                        url: resUpload.secure_url,
+                        type: 'doc'
+                    });
+                    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                } catch (err) {
+                    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                }
+            }
         }
 
         const newVideo = new Video({
@@ -200,7 +221,9 @@ router.post('/upload', upload.fields([
             sourceType,
             thumbnailUrl,
             uploader: uploaderId,
-            resources
+            resources,
+            duration: parseInt(req.body.duration) || 0,
+            subject: req.body.subject || 'General',
         });
 
         await newVideo.save();
@@ -211,15 +234,30 @@ router.post('/upload', upload.fields([
     }
 });
 
-// DELETE VIDEO
-router.delete('/:id', async (req, res) => {
+// DELETE VIDEO (Admin Only)
+router.delete('/:id', authMiddleware, isAdmin, async (req, res) => {
     try {
-        const { userId } = req.body;
         const video = await Video.findById(req.params.id);
 
         if (!video) return res.status(404).json({ message: "Video not found" });
 
-        if (video.uploader.toString() !== userId) {
+        await Video.findByIdAndDelete(req.params.id);
+        await Comment.deleteMany({ video: req.params.id });
+
+        res.json({ message: "Video deleted by admin" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// DELETE VIDEO (User owning the video)
+router.delete('/my-video/:id', authMiddleware, async (req, res) => {
+    try {
+        const video = await Video.findById(req.params.id);
+
+        if (!video) return res.status(404).json({ message: "Video not found" });
+
+        if (video.uploader.toString() !== req.user.id) {
             return res.status(403).json({ message: "Not authorized to delete" });
         }
 
@@ -250,4 +288,104 @@ router.post('/:id/comments', async (req, res) => {
     }
 });
 
+// ── LIKE / UNLIKE ────────────────────────────────────────────────────────────
+// POST /api/videos/:id/like   body: { userId }
+router.post('/:id/like', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) return res.status(401).json({ message: 'Login required' });
+
+        const video = await Video.findById(req.params.id);
+        if (!video) return res.status(404).json({ message: 'Video not found' });
+
+        const idx = video.likes.indexOf(userId);
+        if (idx === -1) {
+            video.likes.push(userId);   // like
+        } else {
+            video.likes.splice(idx, 1); // unlike
+        }
+        await video.save();
+
+        res.json({ likes: video.likes.length, liked: idx === -1 });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// ── SUBSCRIBE / UNSUBSCRIBE ──────────────────────────────────────────────────
+// POST /api/videos/:id/subscribe  body: { userId }
+// Subscribes the current user (userId) to the uploader of video :id
+router.post('/:id/subscribe', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) return res.status(401).json({ message: 'Login required' });
+
+        const video = await Video.findById(req.params.id).populate('uploader', '_id subscribers');
+        if (!video) return res.status(404).json({ message: 'Video not found' });
+
+        const uploaderId = video.uploader._id.toString();
+        if (uploaderId === userId) {
+            return res.status(400).json({ message: 'Cannot subscribe to yourself' });
+        }
+
+        const uploader = await User.findById(uploaderId);
+        const subscriber = await User.findById(userId);
+        if (!uploader || !subscriber) return res.status(404).json({ message: 'User not found' });
+
+        const alreadySubbed = uploader.subscribers.map(s => s.toString()).includes(userId);
+
+        if (alreadySubbed) {
+            // Unsubscribe
+            uploader.subscribers = uploader.subscribers.filter(s => s.toString() !== userId);
+            subscriber.subscribedTo = subscriber.subscribedTo.filter(s => s.toString() !== uploaderId);
+        } else {
+            // Subscribe
+            uploader.subscribers.push(userId);
+            subscriber.subscribedTo.push(uploaderId);
+        }
+
+        await Promise.all([uploader.save(), subscriber.save()]);
+
+        res.json({
+            subscribers: uploader.subscribers.length,
+            subscribed: !alreadySubbed
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// ── VIEW INCREMENT ───────────────────────────────────────────────────────────
+// POST /api/videos/:id/view  (no body needed)
+router.post('/:id/view', async (req, res) => {
+    try {
+        const video = await Video.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { views: 1 } },
+            { new: true }
+        );
+        if (!video) return res.status(404).json({ message: 'Video not found' });
+        res.json({ views: video.views });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// ── SHARE COUNT ──────────────────────────────────────────────────────────────
+// POST /api/videos/:id/share  (tracks share events)
+router.post('/:id/share', async (req, res) => {
+    try {
+        const video = await Video.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { shares: 1 } },
+            { new: true }
+        );
+        if (!video) return res.status(404).json({ message: 'Video not found' });
+        res.json({ shares: video.shares });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 module.exports = router;
+

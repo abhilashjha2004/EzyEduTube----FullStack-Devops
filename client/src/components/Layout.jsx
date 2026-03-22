@@ -4,15 +4,20 @@ import Sidebar from './Sidebar';
 
 const Layout = ({ children }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [collapsed, setCollapsed] = useState(false);
 
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+    const sidebarWidth = collapsed ? 'md:ml-16' : 'md:ml-60';
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <Navbar toggleSidebar={toggleSidebar} />
-            <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-
-            <main className={`transition-all duration-300 pt-16 md:ml-64`}>
+            <Navbar toggleSidebar={() => setSidebarOpen(p => !p)} />
+            <Sidebar
+                isOpen={sidebarOpen}
+                toggleSidebar={() => setSidebarOpen(p => !p)}
+                collapsed={collapsed}
+                toggleCollapsed={() => setCollapsed(p => !p)}
+            />
+            <main className={`transition-all duration-300 pt-16 ${sidebarWidth}`}>
                 <div className="container mx-auto p-6">
                     {children}
                 </div>

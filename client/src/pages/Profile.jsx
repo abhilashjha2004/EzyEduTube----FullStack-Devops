@@ -4,12 +4,14 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { Play, FileText, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import LogoutModal from '../components/LogoutModal';
 
 const Profile = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [myResources, setMyResources] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     useEffect(() => {
         if (!user) {
@@ -38,6 +40,11 @@ const Profile = () => {
 
     return (
         <div className="max-w-5xl mx-auto">
+            <LogoutModal
+                isOpen={showLogoutModal}
+                onConfirm={() => { logout(); setShowLogoutModal(false); }}
+                onCancel={() => setShowLogoutModal(false)}
+            />
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -55,7 +62,7 @@ const Profile = () => {
                     </p>
                 </div>
                 <div>
-                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={logout} className="px-4 py-2 border rounded-md hover:bg-destructive hover:text-white transition-colors text-sm font-medium">Logout</motion.button>
+                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowLogoutModal(true)} className="px-4 py-2 border rounded-md hover:bg-destructive hover:text-white transition-colors text-sm font-medium">Logout</motion.button>
                 </div>
             </motion.div>
 
