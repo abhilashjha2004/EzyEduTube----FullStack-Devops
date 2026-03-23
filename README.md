@@ -1,11 +1,12 @@
 # 🎓 EzyEduTube (Education-Only Online Learning Platform)
 
-
-
-
-
-
-\
+![Stack](https://img.shields.io/badge/Stack-MERN-blue)
+![Frontend](https://img.shields.io/badge/Frontend-React%20%7C%20Tailwind-success)
+![Backend](https://img.shields.io/badge/Backend-Node.js%20%7C%20Express-green)
+![Database](https://img.shields.io/badge/Database-MongoDB-brightgreen)
+![Auth](https://img.shields.io/badge/Auth-JWT-orange)
+![Project](https://img.shields.io/badge/Project-Active-success)
+![Maintained](https://img.shields.io/badge/Maintained-Yes-blue)
 
 ---
 
@@ -40,10 +41,10 @@ EzyEduTube is a **full-stack MERN-based learning platform** built to provide a *
 
 ## 🔗 Quick Links
 
-| Resource       | Link                                                                                    |
-| -------------- | --------------------------------------------------------------------------------------- |
-| 🌐 Live Demo   | *Add your deployed link here*                                                           |
-| 💻 GitHub Repo | https://github.com/abhilashjha2004/EzyEduTube---Education-Only-Online-Learning-Platform |
+| Resource       | Link                                                                                                                                                                               |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🌐 Live Demo   | *Add your deployed link here*                                                                                                                                                      |
+| 💻 GitHub Repo | [https://github.com/abhilashjha2004/EzyEduTube---Education-Only-Online-Learning-Platform](https://github.com/abhilashjha2004/EzyEduTube---Education-Only-Online-Learning-Platform) |
 
 ---
 
