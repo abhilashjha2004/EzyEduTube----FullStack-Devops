@@ -1,39 +1,137 @@
-🎓 EzyEduTube - Education-Only Online Learning Platform
+# 🎓 EzyEduTube (Education-Only Online Learning Platform)
 
-EzyEduTube is a full-stack MERN-based learning platform designed to deliver a distraction-free educational experience. The platform organizes educational videos, notes, and practice resources into structured course paths, helping students focus only on meaningful learning content.
+---
 
+## 🚀 Overview
 
-🚀 Key Features
-📚 Structured Learning Paths
-Organizes videos, notes, and practice questions into well-defined courses for better learning flow.
+EzyEduTube is a **full-stack MERN-based learning platform** built to provide a **distraction-free educational environment**. It organizes educational videos, notes, and practice questions into structured course paths while filtering out non-educational content.
 
-🚫 Distraction-Free Environment
-Filters out irrelevant and non-educational content to maintain a focused platform.
+---
 
-🤖 Automated Content Filtering System
-Detects and blocks non-educational uploads using:
-Video metadata
-Categories
-Keyword-based filtering
-🔐 Secure Authentication System
-Implements JWT-based authentication for user login, registration, and session management.
-🧑‍💻 Scalable Backend Architecture
-Designed to efficiently manage:
-User accounts
-Course content
-Resource handling
+## ✨ Key Features
 
-🛠️ Tech Stack
-Frontend: React.js, Tailwind CSS
-Backend: Node.js, Express.js
-Database: MongoDB
-Authentication: JWT
-APIs: REST APIs
+* 📚 Structured course-based learning system
+* 🚫 Distraction-free platform (no irrelevant content)
+* 🤖 Automated content filtering using metadata & keywords
+* 🔐 Secure authentication with JWT
+* 🧑‍💻 Scalable backend & REST API architecture
+* 📱 Fully responsive modern UI
 
-📁 Project Structure
+---
+
+## 🛠️ Tech Stack
+
+| Layer    | Technology             |
+| -------- | ---------------------- |
+| Frontend | React.js, Tailwind CSS |
+| Backend  | Node.js, Express.js    |
+| Database | MongoDB                |
+| Auth     | JWT                    |
+| APIs     | REST APIs              |
+
+---
+
+## 🔗 Quick Links
+
+| Resource       | Link                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------- |
+| 🌐 Live Demo   | *Add your deployed link here*                                                           |
+| 💻 GitHub Repo | https://github.com/abhilashjha2004/EzyEduTube---Education-Only-Online-Learning-Platform |
+
+---
+
+## 📁 Project Structure
+
+```
 EzyEduTube/
-├── client/        # React frontend
-├── server/        # Node.js backend
-├── admin/         # Admin dashboard
-├── render.yaml    # Deployment configuration
+├── client/        # Frontend (React)
+├── server/        # Backend (Node.js)
+├── admin/         # Admin Panel
+├── render.yaml    # Deployment config
 └── package.json
+```
+
+---
+
+## ⚙️ Setup Instructions
+
+### Clone Repository
+
+```
+git clone https://github.com/abhilashjha2004/EzyEduTube---Education-Only-Online-Learning-Platform.git
+cd EzyEduTube---Education-Only-Online-Learning-Platform
+```
+
+### Install Dependencies
+
+```
+npm install
+cd client && npm install
+cd ../server && npm install
+```
+
+### Environment Variables
+
+Create `.env` in server:
+
+```
+PORT=5000
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_secret
+```
+
+---
+
+## ▶️ Run Project
+
+### Backend
+
+```
+cd server
+npm start
+```
+
+### Frontend
+
+```
+cd client
+npm start
+```
+
+---
+
+## 🌐 Deployment
+
+* Backend → Render
+* Frontend → Vercel / Netlify
+
+---
+
+## 🎯 Highlights
+
+* Built a **distraction-free learning platform**
+* Implemented **automated content filtering system**
+* Designed **scalable backend architecture**
+* Used modern **MERN stack with JWT authentication**
+
+---
+
+## 🔮 Future Scope
+
+* 💳 Payment Integration
+* 📊 User Analytics Dashboard
+* 🧠 AI-based Recommendations
+* 📱 Mobile App
+
+---
+
+## 👨‍💻 Author
+
+**Abhilash Kumar Jha**
+B.Tech CSE | Full Stack Developer | Data Science Enthusiast
+
+---
+
+## ⭐ Support
+
+If you like this project, give it a ⭐ on GitHub!
