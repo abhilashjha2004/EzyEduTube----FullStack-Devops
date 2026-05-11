@@ -425,23 +425,43 @@ const ResourceDetail = () => {
     );
     if (!videoData) return <div className="text-center mt-20 text-zinc-500">Video not found</div>;
 
-    const isOwner = user && videoData.uploader && user._id === videoData.uploader._id;
+    const isOwner = user && videoData.uploader && (user._id === videoData.uploader._id || user._id === videoData.uploader.id || user.id === videoData.uploader.id);
     const canDelete = user && (user.role === 'admin' || isOwner);
 
     const VideoPlayer = () => {
-        if (videoData.sourceType === 'external') {
+        const url = videoData.videoUrl || '';
+
+        // Auto-detect external/YouTube even if sourceType is wrong
+        const isExternal = videoData.sourceType === 'external'
+            || url.includes('youtube.com')
+            || url.includes('youtu.be')
+            || url.includes('vimeo.com')
+            || url.includes('coursera.org');
+
+        if (isExternal) {
             return (
-                <iframe src={buildEmbedUrl(videoData.videoUrl)} className="w-full h-full" allowFullScreen
+                <iframe src={buildEmbedUrl(url)} className="w-full h-full" allowFullScreen
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     title={videoData.title} referrerPolicy="strict-origin-when-cross-origin" />
             );
         }
+
+        if (!url) {
+            return (
+                <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-2">
+                    <Play size={48} className="opacity-30" />
+                    <p className="text-sm">Video file not available</p>
+                </div>
+            );
+        }
+
         return (
-            <video src={videoData.videoUrl} controls className="w-full h-full" poster={videoData.thumbnailUrl} controlsList="nodownload">
+            <video src={url} controls className="w-full h-full" poster={videoData.thumbnailUrl} controlsList="nodownload">
                 Your browser does not support video.
             </video>
         );
     };
+
 
     return (
         <>

@@ -1,49 +1,41 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const UserSchema = new mongoose.Schema({
+const User = sequelize.define('User', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
     username: {
-        type: String,
-        required: true,
-        unique: true,
-        trim: true
-    },
-    password: {
-        type: String,
-        required: false,   // not required for Google OAuth users
-        default: ''
-    },
-    role: {
-        type: String,
-        enum: ['user', 'admin'],
-        default: 'user'
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
     },
     email: {
-        type: String,
-        default: ''
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true
+    },
+    password: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    role: {
+        type: DataTypes.ENUM('user', 'admin', 'teacher'),
+        defaultValue: 'user'
     },
     googleId: {
-        type: String,
-        default: null,
-        sparse: true       // allows multiple null values in unique index
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true
     },
     avatar: {
-        type: String,
-        default: ''
-    },
-    // Users who have subscribed TO this user
-    subscribers: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    // Channels this user has subscribed to
-    subscribedTo: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    createdAt: {
-        type: Date,
-        default: Date.now
+        type: DataTypes.STRING,
+        defaultValue: ''
     }
+}, {
+    timestamps: true
 });
 
-module.exports = mongoose.model('User', UserSchema);
+module.exports = User;

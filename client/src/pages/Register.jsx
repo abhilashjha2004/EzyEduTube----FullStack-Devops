@@ -41,8 +41,14 @@ const Register = () => {
             localStorage.setItem('ezyedutube_visited', '1');
             navigate('/');
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed. Username may already be taken.');
+            // Show the exact server message if available, otherwise show the real reason
+            if (!err.response) {
+                setError('⚠️ Cannot reach server. Is the backend running? Check terminal for errors.');
+            } else {
+                setError(err.response?.data?.message || 'Registration failed. Please try again.');
+            }
         } finally { setLoading(false); }
+
     };
 
     const handleGoogle = () => {

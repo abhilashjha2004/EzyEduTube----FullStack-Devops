@@ -1,30 +1,33 @@
 const dotenv = require('dotenv');
 dotenv.config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
 
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const path = require('path');
+const passport = require('passport');
+
+const { sequelize } = require('./models');
+require('./config/passport');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const helmet = require('helmet');
-const path = require('path');
-const passport = require('passport');
-require('./config/passport');
-
-// Middleware
+// ─── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
     process.env.CLIENT_URL || 'http://localhost:5174',
-    process.env.ADMIN_URL || 'http://localhost:5173',
+    process.env.ADMIN_URL  || 'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5173',
-    'http://localhost:5175'
+    'http://localhost:5175',
+    'http://localhost:3000'
 ];
 
 app.use(cors({
-    origin: function(origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
+    origin: function (origin, callback) {
+        if (!origin || origin.startsWith('http://localhost:')) {
+            callback(null, true);
+        } else if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -32,37 +35,46 @@ app.use(cors({
     },
     credentials: true
 }));
+
+// ─── Core Middleware ──────────────────────────────────────────────────────────
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
-app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
-// Serve Static Uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Database Connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/eduhub')
-    .then(() => console.log('MongoDB Connected'))
-    .catch(err => console.log(err));
-
-const resourceRoutes = require('./routes/resources');
-const authRoutes = require('./routes/auth');
-const videoRoutes = require('./routes/videos');
-const downloadRoutes = require('./routes/download');
+// ─── Routes ───────────────────────────────────────────────────────────────────
+const authRoutes         = require('./routes/auth');
+const videoRoutes        = require('./routes/videos');
+const courseRoutes       = require('./routes/courses');
+const downloadRoutes     = require('./routes/download');
 const notificationRoutes = require('./routes/notifications');
 
-// app.use('/api/resources', resourceRoutes); // Deprecating old resources
-app.use('/api/auth', authRoutes);
-app.use('/api/videos', videoRoutes);
-app.use('/api/download', downloadRoutes);
+app.use('/api/auth',          authRoutes);
+app.use('/api/videos',        videoRoutes);
+app.use('/api/courses',       courseRoutes);
+app.use('/api/download',      downloadRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-app.get('/', (req, res) => {
-    res.send('Edu-Tube API is running');
-});
+app.get('/', (_req, res) => res.json({ message: 'EzyEduTube API is running ✅', db: 'MySQL' }));
 
-// Start Server
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+// ─── MySQL Sync + Start Server ────────────────────────────────────────────────
+const startServer = async () => {
+    try {
+        // Test DB connection
+        await sequelize.authenticate();
+        console.log('✅  MySQL connected successfully.');
+
+        // Sync models (alter: true updates existing tables without destroying data)
+        await sequelize.sync({ alter: true });
+        console.log('✅  Database schema synced.');
+
+        app.listen(PORT, () => {
+            console.log(`🚀  Server running on port ${PORT}`);
+        });
+    } catch (err) {
+        console.error('❌  Unable to connect to MySQL:', err.message);
+        process.exit(1);
+    }
+};
+
+startServer();

@@ -1,28 +1,34 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const notificationSchema = new mongoose.Schema({
-    recipient: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+const Notification = sequelize.define('Notification', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
     },
     type: {
-        // 'new_video'  – someone you follow uploaded
-        // 'comment'    – someone commented on your video
-        // 'welcome'    – first-time login greeting
-        type: String,
-        enum: ['new_video', 'comment', 'like', 'welcome', 'system'],
-        default: 'system'
+        type: DataTypes.ENUM('new_video', 'comment', 'like', 'welcome', 'system'),
+        defaultValue: 'system'
     },
-    title: { type: String, required: true },
-    message: { type: String, default: '' },
-    link: { type: String, default: '' },   // e.g. /resource/:id
-    read: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now }
+    title: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    message: {
+        type: DataTypes.TEXT,
+        defaultValue: ''
+    },
+    link: {
+        type: DataTypes.STRING,
+        defaultValue: ''
+    },
+    read: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    }
+}, {
+    timestamps: true
 });
 
-// Unique compound index — enforces one notification per (user + type + link) at DB level.
-// 'sparse: true' lets documents with empty link still coexist as long as type differs.
-notificationSchema.index({ recipient: 1, type: 1, link: 1 }, { unique: true, sparse: true });
-
-module.exports = mongoose.model('Notification', notificationSchema);
+module.exports = Notification;

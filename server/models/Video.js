@@ -1,68 +1,46 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const VideoSchema = new mongoose.Schema({
+const Video = sequelize.define('Video', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
     title: {
-        type: String,
-        required: true
+        type: DataTypes.STRING,
+        allowNull: false
     },
     description: {
-        type: String
+        type: DataTypes.TEXT,
+        allowNull: true
     },
     videoUrl: {
-        type: String, // Can be local path or external URL
-    },
-    sourceType: {
-        type: String,
-        enum: ['upload', 'external'],
-        default: 'upload'
+        type: DataTypes.STRING,
+        allowNull: false
     },
     thumbnailUrl: {
-        type: String
+        type: DataTypes.STRING,
+        allowNull: true
     },
-    uploader: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    resources: [{
-        title: String,
-        url: String,
-        type: { type: String, enum: ['pdf', 'link'], default: 'pdf' }
-    }],
     duration: {
-        type: Number,   // seconds
-        default: 0
+        type: DataTypes.INTEGER, // in seconds
+        defaultValue: 0
     },
     views: {
-        type: Number,
-        default: 0
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     },
-    shares: {
-        type: Number,
-        default: 0
+    sourceType: {
+        type: DataTypes.ENUM('upload', 'external'),
+        defaultValue: 'upload'
     },
-    likes: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    subject: {
-        type: String,
-        default: 'General',
-        enum: [
-            'General', 'Mathematics', 'Science', 'Physics', 'Chemistry', 'Biology',
-            'Programming', 'Computer Science', 'Artificial Intelligence',
-            'Technology', 'Engineering', 'Data Science',
-            'History', 'Geography', 'Social Studies',
-            'English', 'Literature', 'Language',
-            'Business', 'Economics', 'Commerce',
-            'Design', 'Arts', 'Music',
-            'Medical', 'Law', 'Psychology'
-        ]
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
+    orderIndex: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     }
+}, {
+    timestamps: true
 });
 
-module.exports = mongoose.model('Video', VideoSchema);
+module.exports = Video;

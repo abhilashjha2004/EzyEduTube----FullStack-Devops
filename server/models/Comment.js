@@ -1,24 +1,18 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const CommentSchema = new mongoose.Schema({
+const Comment = sequelize.define('Comment', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
     content: {
-        type: String,
-        required: true
-    },
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    video: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Video',
-        required: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
+        type: DataTypes.TEXT,
+        allowNull: false
     }
+}, {
+    timestamps: true
 });
 
-module.exports = mongoose.model('Comment', CommentSchema);
+module.exports = Comment;

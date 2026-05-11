@@ -74,9 +74,31 @@ class AIClassifier {
         }
     }
 
-    // MAIN ANALYSIS FUNCTION
+    // PURE TEXT ANALYSIS
+    analyzeText(title, description, additionalText = '') {
+        const combinedText = `${title} ${description} ${additionalText}`.toLowerCase();
+
+        // Strict Keyword Check (Instant Block)
+        const BLOCK_KEYWORDS = [
+            'gameplay', 'fortnite', 'pubg', 'prank', 'movie', 'trailer', 'sexy', 'nude', 'kill', 'violence',
+            'vulgar', 'viral', 'hot', 'kiss', 'porn', 'adult', 'nsfw', 'romance', 'gossip', 'scandal'
+        ];
+        const hasBlockedKeyword = BLOCK_KEYWORDS.some(word => combinedText.includes(word));
+
+        // C. Classification
+        const classification = this.classifier.classify(combinedText);
+
+        console.log(`AI Verdict: Class=${classification}, BlockList=${hasBlockedKeyword}`);
+
+        if (hasBlockedKeyword) return { allowed: false, reason: "Detected blocked content (Keywords/OCR)" };
+        if (classification === 'entertainment') return { allowed: false, reason: "AI classified content as Entertainment" };
+
+        return { allowed: true };
+    }
+
+    // MAIN ANALYSIS FUNCTION (For Video Files)
     async analyzeContent(videoPath, title, description) {
-        let combinedText = `${title} ${description}`.toLowerCase();
+        let additionalText = '';
         let framePaths = [];
 
         try {
@@ -89,7 +111,7 @@ class AIClassifier {
             for (const frame of framePaths) {
                 const ocrText = await this.scanImage(frame);
                 console.log(`AI Read: "${ocrText.substring(0, 50)}..."`);
-                combinedText += " " + ocrText;
+                additionalText += " " + ocrText;
             }
 
         } catch (err) {
@@ -101,20 +123,7 @@ class AIClassifier {
             });
         }
 
-        // C. Classification
-        const classification = this.classifier.classify(combinedText);
-        // confidence is trickier in 'natural', but we assume classification is best guess
-
-        // D. Strict Keyword Check (Instant Block)
-        const BLOCK_KEYWORDS = ['gameplay', 'fortnite', 'pubg', 'prank', 'movie', 'trailer', 'sexy', 'nude', 'kill', 'violence'];
-        const hasBlockedKeyword = BLOCK_KEYWORDS.some(word => combinedText.includes(word));
-
-        console.log(`AI Verdict: Class=${classification}, BlockList=${hasBlockedKeyword}`);
-
-        if (hasBlockedKeyword) return { allowed: false, reason: "Detected blocked content (Keywords/OCR)" };
-        if (classification === 'entertainment') return { allowed: false, reason: "AI classified content as Entertainment" };
-
-        return { allowed: true };
+        return this.analyzeText(title, description, additionalText);
     }
 }
 

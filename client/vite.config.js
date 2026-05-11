@@ -6,6 +6,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5174,
-    strictPort: true,
+    strictPort: false,   // auto-pick next port if 5174 is busy
   }
 })

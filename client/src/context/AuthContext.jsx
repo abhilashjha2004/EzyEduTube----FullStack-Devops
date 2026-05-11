@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext(null);
-const API = import.meta.env.VITE_API_URL || 'https://ezyedutube-backend.onrender.com/';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 axios.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
