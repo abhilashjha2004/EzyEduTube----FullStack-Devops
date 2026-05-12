@@ -21,3 +21,6 @@ uploads/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Scraping cache
+*-player-script.js
