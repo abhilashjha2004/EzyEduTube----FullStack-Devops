@@ -1,2 +1,23 @@
-node_modules/ 
-.env 
+# dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# environment files
+.env
+client/.env
+server/.env
+
+# logs
+npm-debug.log*
+
+# build folders
+dist/
+build/
+
+# uploads optional
+uploads/
+
+# OS files
+.DS_Store
+Thumbs.db
