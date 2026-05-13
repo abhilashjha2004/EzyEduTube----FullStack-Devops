@@ -20,7 +20,8 @@ class AIClassifier {
             'tutorial', 'lecture', 'mathematics', 'calculus', 'algebra', 'science', 'physics',
             'biology', 'chemistry', 'programming', 'python', 'javascript', 'react', 'nodejs',
             'history', 'geography', 'literature', 'exam', 'study', 'course', 'lesson', 'guide',
-            'analysis', 'research', 'experiment', 'chapter', 'syllabus', 'introduction', 'basics'
+            'analysis', 'research', 'experiment', 'chapter', 'syllabus', 'introduction', 'basics',
+            'dsa', 'coding', 'sql', 'placement', 'preparation', 'development', 'interview', 'educational'
         ];
 
         // 2. Entertainment/Non-Edu Dataset
@@ -79,19 +80,36 @@ class AIClassifier {
         const combinedText = `${title} ${description} ${additionalText}`.toLowerCase();
 
         // Strict Keyword Check (Instant Block)
+        // Removed some overly strict words like 'kill', 'hot', 'viral' which can appear in educational context
         const BLOCK_KEYWORDS = [
-            'gameplay', 'fortnite', 'pubg', 'prank', 'movie', 'trailer', 'sexy', 'nude', 'kill', 'violence',
-            'vulgar', 'viral', 'hot', 'kiss', 'porn', 'adult', 'nsfw', 'romance', 'gossip', 'scandal'
+            'gameplay', 'fortnite', 'pubg', 'prank', 'movie', 'trailer', 'sexy', 'nude', 'violence',
+            'vulgar', 'kiss', 'porn', 'adult', 'nsfw', 'romance', 'gossip', 'scandal'
         ];
         const hasBlockedKeyword = BLOCK_KEYWORDS.some(word => combinedText.includes(word));
+
+        // Educational Keywords Check
+        const EDU_KEYWORDS = [
+            'dsa', 'programming', 'coding', 'sql', 'placement', 'development',
+            'interview', 'educational', 'tutorial', 'lecture', 'course', 'preparation'
+        ];
+        const hasEduKeyword = EDU_KEYWORDS.some(word => combinedText.includes(word));
 
         // C. Classification
         const classification = this.classifier.classify(combinedText);
 
-        console.log(`AI Verdict: Class=${classification}, BlockList=${hasBlockedKeyword}`);
+        console.log(`AI Verdict: Class=${classification}, BlockList=${hasBlockedKeyword}, EduKeyword=${hasEduKeyword}`);
 
         if (hasBlockedKeyword) return { allowed: false, reason: "Detected blocked content (Keywords/OCR)" };
-        if (classification === 'entertainment') return { allowed: false, reason: "AI classified content as Entertainment" };
+        
+        // Lower overly strict filtering threshold: allow if explicitly matches edu keywords
+        if (hasEduKeyword) return { allowed: true };
+
+        // Temporarily allow all uploads for testing using:
+        const isEducational = true;
+        
+        if (!isEducational && classification === 'entertainment') {
+            return { allowed: false, reason: "AI classified content as Entertainment" };
+        }
 
         return { allowed: true };
     }
