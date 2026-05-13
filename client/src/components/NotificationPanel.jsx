@@ -38,7 +38,7 @@ const NotificationPanel = () => {
         if (!user?._id) return;
         setLoading(true);
         try {
-            const { data } = await axios.get(`http://localhost:5000/api/notifications/${user._id}`);
+            const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/notifications/${user._id}`);
             setNotifications(data.notifications || []);
             setUnreadCount(data.unreadCount || 0);
         } catch (err) {
@@ -74,7 +74,7 @@ const NotificationPanel = () => {
     const markAllRead = async () => {
         if (!user?._id || unreadCount === 0) return;
         try {
-            await axios.patch(`http://localhost:5000/api/notifications/${user._id}/read-all`);
+            await axios.patch(`${import.meta.env.VITE_API_URL}/api/notifications/${user._id}/read-all`);
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
             setUnreadCount(0);
         } catch (err) {
@@ -85,7 +85,7 @@ const NotificationPanel = () => {
     // ── Click a single notification ───────────────────────────
     const handleClick = async (notif) => {
         try {
-            await axios.patch(`http://localhost:5000/api/notifications/single/${notif._id}/read`);
+            await axios.patch(`${import.meta.env.VITE_API_URL}/api/notifications/single/${notif._id}/read`);
         } catch { /* silent */ }
         setNotifications(prev =>
             prev.map(n => n._id === notif._id ? { ...n, read: true } : n)

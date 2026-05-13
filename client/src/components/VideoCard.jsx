@@ -39,7 +39,7 @@ const DownloadModal = ({ video, onClose }) => {
             try {
                 setLoading(true);
                 setError(null);
-                const res = await axios.get('http://localhost:5000/api/download/formats', {
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/download/formats`, {
                     params: { url: video.videoUrl }
                 });
                 setFormats(res.data.formats);
@@ -62,7 +62,7 @@ const DownloadModal = ({ video, onClose }) => {
         });
         // Open as a direct anchor download from server stream
         const a = document.createElement('a');
-        a.href = `http://localhost:5000/api/download/stream?${params.toString()}`;
+        a.href = `${import.meta.env.VITE_API_URL}/api/download/stream?${params.toString()}`;
         a.download = `${video.title || 'video'}.${format.container || 'mp4'}`;
         document.body.appendChild(a);
         a.click();

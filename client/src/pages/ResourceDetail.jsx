@@ -115,7 +115,7 @@ const ShareModal = ({ isOpen, onClose, videoId, videoTitle, onShared }) => {
         window.open(platform.href, '_blank', 'width=600,height=500,noopener,noreferrer');
         // Track share
         try {
-            const res = await axios.post(`http://localhost:5000/api/videos/${videoId}/share`);
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/${videoId}/share`);
             onShared(res.data.shares);
         } catch { }
     };
@@ -135,7 +135,7 @@ const ShareModal = ({ isOpen, onClose, videoId, videoTitle, onShared }) => {
         setTimeout(() => setCopied(false), 2500);
         // Track share
         try {
-            const res = await axios.post(`http://localhost:5000/api/videos/${videoId}/share`);
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/${videoId}/share`);
             onShared(res.data.shares);
         } catch { }
     };
@@ -305,7 +305,7 @@ const ResourceDetail = () => {
         let cancelled = false;
         const fetchVideo = async () => {
             try {
-                const res = await axios.get(`http://localhost:5000/api/videos/${id}`);
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/videos/${id}`);
                 if (cancelled) return;
                 const v = res.data.video;
                 setVideoData(v);
@@ -317,7 +317,7 @@ const ResourceDetail = () => {
 
                 // Fetch uploader for subscriber count + subscription state
                 if (v.uploader?._id) {
-                    const uploaderRes = await axios.get(`http://localhost:5000/api/auth/user/${v.uploader._id}`).catch(() => null);
+                    const uploaderRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/user/${v.uploader._id}`).catch(() => null);
                     if (!cancelled && uploaderRes) {
                         const u = uploaderRes.data;
                         setSubCount(u.subscribers?.length ?? 0);
@@ -339,14 +339,14 @@ const ResourceDetail = () => {
     // Increment view once
     useEffect(() => {
         if (!id) return;
-        axios.post(`http://localhost:5000/api/videos/${id}/view`)
+        axios.post(`${import.meta.env.VITE_API_URL}/api/videos/${id}/view`)
             .then(res => setViewCount(res.data.views))
             .catch(() => { });
     }, [id]);
 
     // Fetch all videos for recommendations
     useEffect(() => {
-        axios.get('http://localhost:5000/api/videos').then(res => setAllVideos(res.data)).catch(() => { });
+        axios.get(`${import.meta.env.VITE_API_URL}/api/videos`).then(res => setAllVideos(res.data)).catch(() => { });
     }, []);
 
     const recommended = useMemo(() => {
@@ -374,7 +374,7 @@ const ResourceDetail = () => {
         if (!user) return;
         setLiking(true);
         try {
-            const res = await axios.post(`http://localhost:5000/api/videos/${id}/like`, { userId: user._id });
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/${id}/like`, { userId: user._id });
             setLiked(res.data.liked);
             setLikeCount(res.data.likes);
         } catch { }
@@ -385,7 +385,7 @@ const ResourceDetail = () => {
         if (!user) return;
         setSubscribing(true);
         try {
-            const res = await axios.post(`http://localhost:5000/api/videos/${id}/subscribe`, { userId: user._id });
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/${id}/subscribe`, { userId: user._id });
             setSubscribed(res.data.subscribed);
             setSubCount(res.data.subscribers);
         } catch (err) {
@@ -398,7 +398,7 @@ const ResourceDetail = () => {
         e.preventDefault();
         if (!comment.trim()) return;
         try {
-            const res = await axios.post(`http://localhost:5000/api/videos/${id}/comments`, { userId: user._id, content: comment });
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/${id}/comments`, { userId: user._id, content: comment });
             setComments(prev => [res.data, ...prev]);
             setComment('');
         } catch { }
@@ -408,8 +408,8 @@ const ResourceDetail = () => {
         if (!window.confirm('Delete this video?')) return;
         try {
             const endpoint = (user.role === 'admin') 
-                ? `http://localhost:5000/api/videos/${id}`
-                : `http://localhost:5000/api/videos/my-video/${id}`;
+                ? `${import.meta.env.VITE_API_URL}/api/videos/${id}`
+                : `${import.meta.env.VITE_API_URL}/api/videos/my-video/${id}`;
             await axios.delete(endpoint);
             navigate('/');
         } catch { alert('Failed to delete'); }

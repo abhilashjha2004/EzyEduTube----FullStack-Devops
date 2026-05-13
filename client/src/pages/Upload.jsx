@@ -90,7 +90,7 @@ const Upload = () => {
 
         try {
             setLoading(true);
-            await axios.post('http://localhost:5000/api/videos/upload', formData, {
+            await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/upload`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             navigate('/');

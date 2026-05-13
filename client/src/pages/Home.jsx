@@ -76,7 +76,7 @@ const Home = () => {
     const searchQuery = searchParams.get('search') || '';
 
     useEffect(() => {
-        axios.get('http://localhost:5000/api/videos')
+        axios.get(`${import.meta.env.VITE_API_URL}/api/videos`)
             .then(res => setVideos(res.data))
             .catch(err => console.error('Failed to fetch videos', err))
             .finally(() => setLoading(false));

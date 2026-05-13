@@ -23,7 +23,7 @@ const Profile = () => {
             // In prod: GET /api/user/:id/resources
             // Rapid prototype: Fetch all and filter
             try {
-                const res = await axios.get('http://localhost:5000/api/resources');
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/resources`);
                 const mine = res.data.filter(r => r.uploader === user.username);
                 setMyResources(mine);
             } catch (err) {

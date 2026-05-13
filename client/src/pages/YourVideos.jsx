@@ -13,7 +13,7 @@ const YourVideos = () => {
     useEffect(() => {
         const fetchMyVideos = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/videos');
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/videos`);
                 const mine = res.data.filter(v => v.uploader?._id === user?._id || v.uploader === user?._id);
                 setVideos(mine);
             } catch (err) {
