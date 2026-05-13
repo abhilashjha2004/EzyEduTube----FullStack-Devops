@@ -77,8 +77,8 @@ const startServer = async () => {
         console.log('✅  MySQL connected successfully.');
 
         // Sync models (alter: true updates existing tables without destroying data)
-
-        console.log('✅  Using existing imported database.');
+        await sequelize.sync({ alter: true });
+        console.log('✅ Database synced successfully.');
 
         app.listen(PORT, () => {
             console.log(`🚀  Server running on port ${PORT}`);
