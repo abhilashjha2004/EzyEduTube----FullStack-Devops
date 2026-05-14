@@ -53,7 +53,7 @@ const Register = () => {
 
     const handleGoogle = () => {
         localStorage.setItem('ezyedutube_visited', '1');
-        window.location.href = `${API}/api/auth/google`;
+        window.location.href = "https://ezyedutube-backend.onrender.com/api/auth/google";
     };
 
     return (

@@ -2,7 +2,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+// Use explicit production URL to avoid Vercel preview auth intercept
+const CLIENT_URL = 'https://ezy-edu-tube-education-only-online.vercel.app';
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_eduhub_2026';
 
 const googleConfigured = () =>
