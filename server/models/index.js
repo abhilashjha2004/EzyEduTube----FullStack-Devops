@@ -55,21 +55,21 @@ Video.belongsTo(User, { foreignKey: 'uploaderId', as: 'uploader' });
 
 // ─── Subscriptions (self-referential many-to-many) ───────────────────────────
 User.belongsToMany(User, {
-    through: 'subscriptions',
+    through: 'Subscriptions',
     as: 'subscribers',
     foreignKey: 'channelId',
     otherKey: 'subscriberId'
 });
 User.belongsToMany(User, {
-    through: 'subscriptions',
+    through: 'Subscriptions',
     as: 'subscriptions',
     foreignKey: 'subscriberId',
     otherKey: 'channelId'
 });
 
 // ─── Video Likes (many-to-many) ────────────────────────────────────────────────
-User.belongsToMany(Video, { through: 'videolikes', as: 'likedVideos', foreignKey: 'userId' });
-Video.belongsToMany(User, { through: 'videolikes', as: 'likedBy', foreignKey: 'videoId' });
+User.belongsToMany(Video, { through: 'Videolikes', as: 'likedVideos', foreignKey: 'userId' });
+Video.belongsToMany(User, { through: 'Videolikes', as: 'likedBy', foreignKey: 'videoId' });
 
 module.exports = {
     sequelize,
