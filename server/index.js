@@ -76,15 +76,28 @@ const startServer = async () => {
         await sequelize.authenticate();
         console.log('✅  MySQL connected successfully.');
 
-        // Sync models (alter: true updates existing tables without destroying data)
-        await sequelize.sync({ alter: true });
-        console.log('✅ Database synced successfully.');
+        // Log models loaded
+        console.log('📦  Models loaded:', Object.keys(sequelize.models).join(', '));
+        console.log('🔄  Starting Sequelize synchronization...');
+
+        // Explicit try-catch around sync for detailed error logging
+        try {
+            // alter: true safely updates tables to match models
+            await sequelize.sync({ alter: true });
+            console.log('✅  Database synced successfully. All tables created/updated.');
+        } catch (syncErr) {
+            console.error('❌  Sequelize Sync Failed!');
+            console.error('Error Name:', syncErr.name);
+            console.error('Error Message:', syncErr.message);
+            console.error('Error Details:', syncErr.parent ? syncErr.parent : syncErr);
+            throw syncErr; // Bubble up to stop server from starting with broken DB
+        }
 
         app.listen(PORT, () => {
             console.log(`🚀  Server running on port ${PORT}`);
         });
     } catch (err) {
-        console.error('❌  Unable to connect to MySQL:', err.message);
+        console.error('❌  Critical Server Error:', err.message);
         process.exit(1);
     }
 };
