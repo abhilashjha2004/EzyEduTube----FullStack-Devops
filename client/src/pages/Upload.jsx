@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Upload as UploadIcon, X, FileText, Image as ImageIcon, Link as LinkIcon, AlertCircle, BookOpen } from 'lucide-react';
+import { Upload as UploadIcon, X, FileText, Image as ImageIcon, Link as LinkIcon, AlertCircle, BookOpen, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 // ── Must match server/models/Video.js enum exactly ──────────────────
@@ -20,6 +20,7 @@ const Upload = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     // Form States
     const [title, setTitle] = useState('');
@@ -29,6 +30,7 @@ const Upload = () => {
 
     // Video Mode
     const [videoFile, setVideoFile] = useState(null);
+    const [videoDuration, setVideoDuration] = useState(0);
 
     // Link Mode
     const [externalLink, setExternalLink] = useState('');
@@ -36,69 +38,145 @@ const Upload = () => {
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [resources, setResources] = useState([]);
     const [error, setError] = useState('');
+    const [warning, setWarning] = useState('This platform only accepts strictly educational content. Entertainment, gaming, and music will be rejected by our AI moderator.');
 
-    const handleFileChange = (e, setter) => {
-        if (e.target.files[0]) setter(e.target.files[0]);
-    };
+    const handleVideoFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-    // Read the actual duration from the video file using HTML5 metadata
-    const getVideoDuration = (file) => new Promise((resolve) => {
+        // Validation
+        if (file.size > 500 * 1024 * 1024) {
+            return setError('Video size must be less than 500MB.');
+        }
+        if (!['video/mp4', 'video/webm', 'video/quicktime'].includes(file.type)) {
+            return setError('Only MP4, WebM, and MOV formats are allowed.');
+        }
+
+        setVideoFile(file);
+        setError('');
+
+        // Get duration
         const vid = document.createElement('video');
         vid.preload = 'metadata';
-        vid.onloadedmetadata = () => { window.URL.revokeObjectURL(vid.src); resolve(Math.round(vid.duration)); };
-        vid.onerror = () => resolve(0);
+        vid.onloadedmetadata = () => {
+            window.URL.revokeObjectURL(vid.src);
+            const dur = Math.round(vid.duration);
+            if (dur < 60) {
+                setError('Videos must be at least 60 seconds long (Shorts are not allowed).');
+                setVideoFile(null);
+            } else {
+                setVideoDuration(dur);
+            }
+        };
         vid.src = window.URL.createObjectURL(file);
-    });
+    };
+
+    const handleThumbnailChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) return setError('Thumbnail must be an image.');
+        setThumbnailFile(file);
+    };
 
     const handleResourceChange = (e) => {
         const files = Array.from(e.target.files);
-        setResources(prev => [...prev, ...files]);
+        const validFiles = files.filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf') || f.name.endsWith('.doc') || f.name.endsWith('.docx'));
+        if (validFiles.length !== files.length) {
+            setError('Some resources were ignored. Only PDF/DOC files are allowed.');
+        }
+        setResources(prev => [...prev, ...validFiles]);
     };
 
     const removeResource = (index) => {
         setResources(prev => prev.filter((_, i) => i !== index));
     };
 
+    const uploadToCloudinaryDirectly = async (file, folder) => {
+        // 1. Get Signature from backend
+        const sigRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/videos/upload-signature${folder === 'ezyedutube/videos' ? '' : '/' + folder.split('/')[1]}`);
+        const { timestamp, signature, cloudName, apiKey } = sigRes.data;
+
+        // 2. Upload directly to Cloudinary
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('api_key', apiKey);
+        formData.append('timestamp', timestamp);
+        formData.append('signature', signature);
+        formData.append('folder', folder);
+        
+        // Eager transformations for optimization
+        if (folder.includes('videos')) {
+            formData.append('eager', 'q_auto,f_auto,vc_h264');
+            formData.append('eager_async', 'true');
+        }
+
+        const resourceType = folder.includes('videos') ? 'video' : folder.includes('thumbnails') ? 'image' : 'raw';
+
+        const res = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, formData, {
+            onUploadProgress: (progressEvent) => {
+                if (folder.includes('videos')) {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setUploadProgress(percentCompleted);
+                }
+            }
+        });
+
+        return res.data.secure_url;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setUploadProgress(0);
 
         if (!title) return setError('Title is required');
         if (uploadMode === 'video' && !videoFile) return setError('Please select a video file.');
-        if (uploadMode === 'link' && !externalLink) return setError('Please enter a valid link.');
+        if (uploadMode === 'link' && !externalLink) return setError('Please enter a valid educational link.');
 
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('description', description);
-        formData.append('subject', subject);
-        formData.append('isExternal', uploadMode === 'link');
-
-        if (uploadMode === 'video') {
-            formData.append('video', videoFile);
-            const dur = await getVideoDuration(videoFile);
-            if (dur > 0) formData.append('duration', dur);
-        } else {
-            formData.append('externalLink', externalLink);
-        }
-
-        if (thumbnailFile) formData.append('thumbnail', thumbnailFile);
-        if (user) formData.append('userId', user._id);
-
-        resources.forEach(file => {
-            formData.append('resources', file);
-        });
+        setLoading(true);
 
         try {
-            setLoading(true);
-            await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/upload`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            let videoUrl = '';
+            let thumbnailUrl = '';
+            let resourcesUrls = [];
+
+            // 1. Upload assets to Cloudinary directly from frontend
+            if (uploadMode === 'video') {
+                videoUrl = await uploadToCloudinaryDirectly(videoFile, 'ezyedutube/videos');
+            }
+            if (thumbnailFile) {
+                thumbnailUrl = await uploadToCloudinaryDirectly(thumbnailFile, 'ezyedutube/thumbnails');
+            }
+            if (resources.length > 0) {
+                for (const resFile of resources) {
+                    const url = await uploadToCloudinaryDirectly(resFile, 'ezyedutube/documents');
+                    resourcesUrls.push(url);
+                }
+            }
+
+            // 2. Send metadata to our backend for AI Moderation & DB Saving
+            setUploadProgress(100); // UI visual update
+            
+            const payload = {
+                title,
+                description,
+                subject,
+                isExternal: uploadMode === 'link',
+                externalLink: uploadMode === 'link' ? externalLink : '',
+                videoUrl: uploadMode === 'video' ? videoUrl : '',
+                thumbnailUrl,
+                resourcesUrls: JSON.stringify(resourcesUrls),
+                duration: videoDuration
+            };
+
+            await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/upload`, payload);
             navigate('/');
         } catch (err) {
             console.error(err);
-            setError(err.response?.data?.message || 'Upload failed. Please try again.');
+            setError(err.response?.data?.message || err.message || 'Upload failed. Please try again.');
         } finally {
             setLoading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -106,8 +184,15 @@ const Upload = () => {
         <div className="max-w-2xl mx-auto py-10 animation-fade-in">
             <h1 className="text-3xl font-bold mb-8 text-zinc-900 dark:text-white flex items-center gap-2">
                 <UploadIcon className="text-red-600" />
-                Upload Content
+                Upload Educational Content
             </h1>
+
+            {warning && (
+                <div className="bg-yellow-500/10 border border-yellow-500 text-yellow-700 dark:text-yellow-400 p-4 rounded-xl mb-6 flex items-start gap-3">
+                    <Info size={24} className="mt-0.5 flex-shrink-0" />
+                    <p className="text-sm font-medium">{warning}</p>
+                </div>
+            )}
 
             {error && (
                 <div className="bg-red-500/10 border border-red-500 text-red-600 p-4 rounded-xl mb-6 flex items-center gap-2">
@@ -137,25 +222,21 @@ const Upload = () => {
                             className="w-full p-3 rounded-lg border bg-zinc-50 dark:bg-zinc-900/50 dark:border-zinc-700 h-28 focus:ring-2 focus:ring-red-500 outline-none transition resize-none"
                             value={description}
                             onChange={e => setDescription(e.target.value)}
-                            placeholder="Describe your content..."
+                            placeholder="Describe your content in detail. This helps our AI verify its educational value."
                         />
                     </div>
                 </div>
 
-                {/* ── Subject / Stream Picker ─────────────────────────── */}
+                {/* Subject / Stream Picker */}
                 <div>
                     <label className="block text-sm font-medium mb-2 flex items-center gap-1.5">
                         <BookOpen size={15} className="text-orange-500" />
                         Subject / Stream
-                        <span className="text-xs text-zinc-400 font-normal">(used for filtering on the home page)</span>
                     </label>
                     <select
                         value={subject}
                         onChange={e => setSubject(e.target.value)}
-                        className="w-full p-3 rounded-lg border bg-zinc-50 dark:bg-zinc-900
-                                   dark:border-zinc-700 focus:ring-2 focus:ring-orange-400
-                                   outline-none transition text-sm text-zinc-800 dark:text-zinc-200
-                                   cursor-pointer"
+                        className="w-full p-3 rounded-lg border bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-700 focus:ring-2 focus:ring-orange-400 outline-none transition text-sm cursor-pointer"
                     >
                         {SUBJECT_OPTIONS.map(({ group, options }) => (
                             <optgroup key={group} label={`── ${group} ──`}>
@@ -165,13 +246,6 @@ const Upload = () => {
                             </optgroup>
                         ))}
                     </select>
-                    {/* Subject badge preview */}
-                    <div className="mt-2 flex items-center gap-1.5">
-                        <span className="text-xs text-zinc-400">Tag preview:</span>
-                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
-                            {subject}
-                        </span>
-                    </div>
                 </div>
 
                 {/* Content Type Toggle */}
@@ -203,12 +277,12 @@ const Upload = () => {
                             <UploadIcon className="mx-auto h-8 w-8 text-red-500 mb-2 transition-transform group-hover:-translate-y-1" />
                             <label className="block text-sm font-medium cursor-pointer">
                                 <span className="text-red-500 font-bold hover:underline">Choose Video File</span>
-                                <input type="file" accept="video/*" hidden onChange={e => handleFileChange(e, setVideoFile)} />
+                                <input type="file" accept="video/mp4,video/webm,video/quicktime" hidden onChange={handleVideoFileChange} />
                             </label>
                             {videoFile ? (
-                                <p className="text-xs mt-2 text-green-600 font-medium truncate bg-green-100 dark:bg-green-900/30 py-1 px-2 rounded">{videoFile.name}</p>
+                                <p className="text-xs mt-2 text-green-600 font-medium truncate bg-green-100 dark:bg-green-900/30 py-1 px-2 rounded">{videoFile.name} ({videoDuration}s)</p>
                             ) : (
-                                <p className="text-xs text-zinc-400 mt-2">MP4, WebM up to 500MB</p>
+                                <p className="text-xs text-zinc-400 mt-2">MP4, WebM, MOV. Min 60s. Max 500MB.</p>
                             )}
                         </div>
                     ) : (
@@ -231,7 +305,7 @@ const Upload = () => {
                         <ImageIcon className="mx-auto h-8 w-8 text-purple-500 mb-2 transition-transform group-hover:-translate-y-1" />
                         <label className="block text-sm font-medium cursor-pointer">
                             <span className="text-purple-500 font-bold hover:underline">Upload Thumbnail</span>
-                            <input type="file" accept="image/*" hidden onChange={e => handleFileChange(e, setThumbnailFile)} />
+                            <input type="file" accept="image/*" hidden onChange={handleThumbnailChange} />
                         </label>
                         {thumbnailFile ? (
                             <p className="text-xs mt-2 text-green-600 font-medium truncate bg-green-100 dark:bg-green-900/30 py-1 px-2 rounded">{thumbnailFile.name}</p>
@@ -243,7 +317,7 @@ const Upload = () => {
 
                 {/* Resources */}
                 <div>
-                    <label className="block text-sm font-medium mb-2">Practice Material (PDFs)</label>
+                    <label className="block text-sm font-medium mb-2">Practice Material (PDF/DOC)</label>
                     <div className="flex items-center gap-4 mb-4">
                         <label className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg cursor-pointer text-sm font-medium hover:opacity-80 transition flex items-center gap-2">
                             <FileText size={16} />
@@ -266,7 +340,26 @@ const Upload = () => {
                     </div>
                 </div>
 
+                {/* Submit & Progress */}
                 <div className="pt-4">
+                    {loading && uploadMode === 'video' && uploadProgress > 0 && uploadProgress < 100 && (
+                        <div className="mb-4">
+                            <div className="flex justify-between text-xs text-zinc-500 mb-1">
+                                <span>Uploading to Cloudinary...</span>
+                                <span>{uploadProgress}%</span>
+                            </div>
+                            <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
+                                <div className="bg-red-500 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {loading && uploadProgress === 100 && (
+                        <div className="mb-4 text-center text-sm font-medium text-orange-500 animate-pulse">
+                            Processing AI Educational Moderation...
+                        </div>
+                    )}
+
                     <button
                         type="submit"
                         disabled={loading}
@@ -275,11 +368,11 @@ const Upload = () => {
                         {loading ? (
                             <>
                                 <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                Publishing...
+                                {uploadProgress < 100 ? 'Uploading...' : 'Verifying...'}
                             </>
                         ) : 'Publish to EzyEduTube'}
                     </button>
-                    <p className="text-center text-xs text-zinc-400 mt-4">By publishing, you verify this content is educational and relevant.</p>
+                    <p className="text-center text-xs text-zinc-400 mt-4">By publishing, you agree to our strict educational content policy.</p>
                 </div>
 
             </form>

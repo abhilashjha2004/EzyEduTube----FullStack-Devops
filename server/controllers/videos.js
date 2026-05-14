@@ -87,8 +87,11 @@ const getAllVideos = async (req, res) => {
     try {
         console.log(`[GET /api/videos] Request received. User authenticated: ${req.user ? 'Yes (' + req.user.id + ')' : 'No (Guest)'}`);
         
-        // Fetching all videos globally without filtering by logged-in user or history
+        // Fetching all videos globally but excluding pending/rejected
         const videos = await Video.findAll({
+            where: {
+                status: 'approved' // Async Moderation filter
+            },
             include: [
                 { model: User, as: 'uploader', attributes: ['id', 'username', 'avatar'] },
                 { model: Course, as: 'course', attributes: ['id', 'title'] }
@@ -131,86 +134,53 @@ const getVideoById = async (req, res) => {
 };
 
 // ─── UPLOAD VIDEO ─────────────────────────────────────────────────────────────
+const YouTubeValidator = require('../services/YouTubeValidator');
+const ModerationQueue = require('../services/ModerationQueue');
+
 const uploadVideo = async (req, res) => {
     try {
         const uploaderId = req.user.id;
         const isExternal = req.body.isExternal === 'true';
         let videoUrl = '';
         let sourceType = 'upload';
+        
+        let title = req.body.title || '';
+        let description = req.body.description || '';
+        let tags = '';
 
         if (isExternal) {
             const externalLink = req.body.externalLink;
             if (!externalLink) return res.status(400).json({ message: 'External link is required' });
-            if (!isEducationalLink(externalLink))
-                return res.status(400).json({ message: 'Blocked: Only links from major educational platforms are allowed.' });
 
-            let extraText = '';
             if (externalLink.includes('youtube.com') || externalLink.includes('youtu.be')) {
-                const { isEdu, fetchedTitle, fetchedDesc } = await checkYouTubeCategory(externalLink);
-                if (!isEdu)
-                    return res.status(400).json({ message: 'Content Blocked: This YouTube video is not categorised as educational.' });
-                extraText = `${fetchedTitle} ${fetchedDesc}`;
-            }
-
-            // Apply AI text guard to external links too
-            const aiResult = AIClassifier.analyzeText(req.body.title || '', req.body.description || '', extraText);
-            if (!aiResult.allowed) {
-                return res.status(400).json({
-                    message: `Upload Rejected by AI Guard: ${aiResult.reason}. Content appears non-educational.`
-                });
+                const validation = await YouTubeValidator.validate(externalLink);
+                if (!validation.isValid) {
+                    return res.status(400).json({ message: `Content Blocked by YouTube Validator: ${validation.reason}` });
+                }
+                if (validation.data) {
+                    title = title || validation.data.title;
+                    description = description || validation.data.description;
+                    tags = validation.data.tags.join(', ');
+                }
             }
             videoUrl = externalLink;
             sourceType = 'external';
         } else {
-            const videoFile = req.files && req.files['video'] ? req.files['video'][0] : null;
-            if (!videoFile) return res.status(400).json({ message: 'Video file is required' });
-
-            // AI content guard
-            const tempPath = path.join(os.tmpdir(), `${Date.now()}_${videoFile.originalname}`);
-            fs.writeFileSync(tempPath, videoFile.buffer);
-
-            let aiResult = { allowed: true };
-            try {
-                aiResult = await AIClassifier.analyzeContent(tempPath, req.body.title, req.body.description);
-            } catch (aiErr) {
-                console.warn('AI Classifier error (non-fatal):', aiErr.message);
-            } finally {
-                if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+            // Frontend direct Cloudinary URL
+            if (req.body.videoUrl) {
+                videoUrl = req.body.videoUrl;
+            } else {
+                return res.status(400).json({ message: 'Video URL is required for upload mode' });
             }
-
-            if (!aiResult.allowed) {
-                return res.status(400).json({
-                    message: `Upload Rejected by AI Guard: ${aiResult.reason}. Content appears non-educational.`
-                });
-            }
-
-            // Save video (Cloudinary or local)
-            videoUrl = await saveFile(videoFile.buffer, videoFile.originalname, 'videos', 'video');
         }
 
         // Thumbnail
-        let thumbnailUrl = '';
-        const thumbFile = req.files && req.files['thumbnail'] ? req.files['thumbnail'][0] : null;
-        if (thumbFile) {
-            try {
-                thumbnailUrl = await saveFile(thumbFile.buffer, thumbFile.originalname, 'thumbnails', 'image');
-            } catch { /* non-fatal */ }
-        }
+        let thumbnailUrl = req.body.thumbnailUrl || '';
 
-        // Resource documents
-        const resourceFiles = req.files && req.files['resources'] ? req.files['resources'] : [];
-        const documentRecords = [];
-        for (const file of resourceFiles) {
-            try {
-                const docUrl = await saveFile(file.buffer, file.originalname, 'documents', 'raw');
-                documentRecords.push({ title: file.originalname, documentUrl: docUrl, type: 'pdf' });
-            } catch { /* skip */ }
-        }
-
-        // Create video record in MySQL
+        // Create video record in MySQL (Status: pending)
         const newVideo = await Video.create({
-            title: req.body.title,
-            description: req.body.description || '',
+            title: title,
+            description: description,
             subject: req.body.subject || 'General',
             videoUrl,
             thumbnailUrl,
@@ -218,18 +188,28 @@ const uploadVideo = async (req, res) => {
             duration: parseInt(req.body.duration) || 0,
             uploaderId,
             courseId: req.body.courseId || null,
-            orderIndex: 0
+            orderIndex: 0,
+            status: 'pending', // Async moderation required
+            isEducational: false,
+            moderationScore: 0,
+            reviewedByAI: false
         });
 
-        // Attach documents
-        if (documentRecords.length > 0) {
-            await Document.bulkCreate(
-                documentRecords.map(d => ({ ...d, courseId: req.body.courseId || null }))
-            );
-        }
+        // Add to Moderation Queue for background processing
+        ModerationQueue.add({
+            videoId: newVideo.id,
+            videoUrl: newVideo.videoUrl,
+            title: newVideo.title,
+            description: newVideo.description,
+            tags: tags,
+            isExternal: isExternal
+        });
 
-        console.log(`✅  Video saved: "${newVideo.title}" | URL: ${videoUrl.slice(0, 60)}`);
-        res.status(201).json(formatVideo(newVideo));
+        console.log(`⏳ Video queued for async moderation: "${newVideo.title}" (ID: ${newVideo.id})`);
+        res.status(201).json({
+            message: "Upload successful. Video is pending AI moderation and will be published shortly.",
+            video: formatVideo(newVideo)
+        });
     } catch (err) {
         console.error('Upload Error Detailed:', err);
         res.status(500).json({ message: err.message || 'An unexpected error occurred during upload.' });

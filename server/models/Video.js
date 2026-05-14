@@ -43,6 +43,38 @@ const Video = sequelize.define('Video', {
     orderIndex: {
         type: DataTypes.INTEGER,
         defaultValue: 0
+    },
+    status: {
+        type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+        defaultValue: 'pending'
+    },
+    isEducational: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    moderationScore: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    visualConfidence: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    transcriptConfidence: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    moderationReason: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    approvedAt: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    reviewedByAI: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     }
 }, {
     timestamps: true,
