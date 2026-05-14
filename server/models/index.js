@@ -73,12 +73,12 @@ Video.belongsToMany(User, { through: 'VideoLikes', as: 'likedBy', foreignKey: 'v
 
 module.exports = {
     sequelize,
-    User,
-    Course,
-    Video,
-    Document,
-    Enrollment,
-    Progress,
-    Comment,
-    Notification
+    user,
+    course,
+    video,
+    document,
+    enrollment,
+    progress,
+    comment,
+    notification
 };

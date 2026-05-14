@@ -24,7 +24,7 @@ const Video = sequelize.define('Video', {
         allowNull: true
     },
     duration: {
-        type: DataTypes.INTEGER, // in seconds
+        type: DataTypes.INTEGER,
         defaultValue: 0
     },
     views: {
@@ -45,7 +45,9 @@ const Video = sequelize.define('Video', {
         defaultValue: 0
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    tableName: 'videos',
+    freezeTableName: true
 });
 
 module.exports = Video;
