@@ -83,14 +83,20 @@ const formatVideo = (video) => ({
 });
 
 // ─── GET ALL VIDEOS ────────────────────────────────────────────────────────────
+const { Op } = require('sequelize'); // Make sure Op is available
+
 const getAllVideos = async (req, res) => {
     try {
         console.log(`[GET /api/videos] Request received. User authenticated: ${req.user ? 'Yes (' + req.user.id + ')' : 'No (Guest)'}`);
         
         // Fetching all videos globally but excluding pending/rejected
+        // Temporarily allowing NULL status for legacy videos that haven't been migrated yet
         const videos = await Video.findAll({
             where: {
-                status: 'approved' // Async Moderation filter
+                [Op.or]: [
+                    { status: 'approved' },
+                    { status: null }
+                ]
             },
             include: [
                 { model: User, as: 'uploader', attributes: ['id', 'username', 'avatar'] },
