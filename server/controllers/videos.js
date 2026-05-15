@@ -89,13 +89,22 @@ const getAllVideos = async (req, res) => {
     try {
         console.log(`[GET /api/videos] Request received. User authenticated: ${req.user ? 'Yes (' + req.user.id + ')' : 'No (Guest)'}`);
         
-        // Fetching all videos globally but excluding pending/rejected
-        // Temporarily allowing NULL status for legacy videos that haven't been migrated yet
+        // Determine moderation feature launch date (e.g. May 11, 2026) for legacy null check
+        const MODERATION_LAUNCH_DATE = new Date('2026-05-11T00:00:00.000Z');
+
+        // Fetching videos globally using strict visibility rules:
+        // 1. Fully approved AI videos
+        // 2. Legacy approved videos (before AI requirement)
+        // 3. Extremely legacy videos (null status before launch date)
         const videos = await Video.findAll({
             where: {
                 [Op.or]: [
-                    { status: 'approved' },
-                    { status: null }
+                    { status: 'approved', isEducational: true },
+                    { status: 'approved', reviewedByAI: false },
+                    { 
+                        status: null, 
+                        createdAt: { [Op.lt]: MODERATION_LAUNCH_DATE } 
+                    }
                 ]
             },
             include: [

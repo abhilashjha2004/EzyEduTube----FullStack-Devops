@@ -135,6 +135,45 @@ class AIClassifier {
         }
     }
 
+    applyRuleBasedFilter(text) {
+        if (!text) return { passed: true, matchedBlacklist: [], matchedWhitelist: [] };
+        
+        const BLACKLIST = [
+            'music', 'song', 'dj', 'remix', 'dance', 'romantic', 'love song', 
+            'bhojpuri', 'bollywood', 'hollywood', 'movie', 'trailer', 'comedy', 
+            'funny', 'prank', 'gaming', 'gameplay', 'pubg', 'free fire', 
+            'minecraft', 'fortnite', 'reaction', 'vlog', 'shorts', 'reels', 
+            'status video', 'viral', 'actor', 'actress', 'celebrity', 
+            'item song', 'album song', 'khesari', 'pawan', 'bhojpuriya'
+        ];
+
+        const WHITELIST = [
+            'tutorial', 'lecture', 'course', 'mathematics', 'physics', 'chemistry', 
+            'biology', 'coding', 'programming', 'javascript', 'react', 'nodejs', 
+            'python', 'java', 'sql', 'dsa', 'data structures', 'algorithms', 
+            'machine learning', 'ai', 'education', 'class', 'training', 'lesson', 
+            'engineering', 'web development'
+        ];
+
+        const lowerText = text.toLowerCase();
+
+        const matchedBlacklist = BLACKLIST.filter(word => {
+            const regex = new RegExp(`\\b${word}\\b`, 'i');
+            return regex.test(lowerText);
+        });
+
+        const matchedWhitelist = WHITELIST.filter(word => {
+            const regex = new RegExp(`\\b${word}\\b`, 'i');
+            return regex.test(lowerText);
+        });
+
+        return {
+            passed: matchedBlacklist.length === 0,
+            matchedBlacklist,
+            matchedWhitelist
+        };
+    }
+
     // Combined Analysis (Async Job)
     async analyzeVideoAsync(task) {
         const { videoId, videoUrl, title, description, tags, isExternal } = task;
@@ -146,6 +185,45 @@ class AIClassifier {
         let visualConfidence = 100; // Assume good until proven bad
         let isNSFW = false;
 
+        // Debug Log Variables
+        let ruleFilterResult = "Pass";
+        let blacklistMatchedStr = "None";
+        let whitelistMatchedStr = "None";
+        let aiScore = 0;
+        let transcriptConfidence = 50;
+        let finalDecision = "rejected";
+
+        // Phase 1: Rule-based Filtering on Metadata
+        const metadataText = `${title || ''} ${description || ''} ${tags || ''}`;
+        const phase1Filter = this.applyRuleBasedFilter(metadataText);
+        
+        if (!phase1Filter.passed) {
+            ruleFilterResult = "Reject";
+            blacklistMatchedStr = phase1Filter.matchedBlacklist.join(', ');
+            whitelistMatchedStr = phase1Filter.matchedWhitelist.length > 0 ? phase1Filter.matchedWhitelist.join(', ') : "None";
+            
+            console.log(`
+==================================================
+[Moderation Debug Logs]
+Rule filter result: ${ruleFilterResult}
+Blacklist matched: ${blacklistMatchedStr}
+Whitelist matched: ${whitelistMatchedStr}
+AI score: N/A
+Transcript score: N/A
+Visual score: N/A
+Final moderation decision: ${finalDecision}
+==================================================`);
+            
+            return { 
+                allowed: false, 
+                score: 0, 
+                visualConfidence: 0, 
+                transcriptConfidence: 0, 
+                reason: `Rejected by Strict Rule-Based Filter (Metadata matched: ${blacklistMatchedStr})` 
+            };
+        }
+
+        let totalWhitelistMatches = new Set(phase1Filter.matchedWhitelist);
         const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'moderation-'));
 
         try {
@@ -179,25 +257,59 @@ class AIClassifier {
                 }
             }
 
-            // 5. NLP Combined Scoring
-            const combinedText = `${title} ${description} ${tags} ${ocrTextCombined} ${transcript}`.toLowerCase();
+            // Phase 2: Rule-based filtering on Transcript & OCR
+            const contentText = `${ocrTextCombined} ${transcript}`;
+            const phase2Filter = this.applyRuleBasedFilter(contentText);
             
-            // Hard keyword check
-            const BLOCKED_WORDS = ['remix', 'song', 'gameplay', 'vlog', 'roast', 'meme', 'prank', 'shorts', 'dance', 'movie clip'];
-            const hasBlocked = BLOCKED_WORDS.some(w => combinedText.includes(w));
-            if (hasBlocked) {
-                return { allowed: false, score: 10, reason: "Detected strictly prohibited entertainment keywords." };
+            if (!phase2Filter.passed) {
+                ruleFilterResult = "Reject";
+                blacklistMatchedStr = phase2Filter.matchedBlacklist.join(', ');
+                whitelistMatchedStr = [...totalWhitelistMatches, ...phase2Filter.matchedWhitelist].join(', ') || "None";
+                
+                console.log(`
+==================================================
+[Moderation Debug Logs]
+Rule filter result: ${ruleFilterResult}
+Blacklist matched: ${blacklistMatchedStr}
+Whitelist matched: ${whitelistMatchedStr}
+AI score: N/A
+Transcript score: N/A
+Visual score: ${visualConfidence}
+Final moderation decision: ${finalDecision}
+==================================================`);
+
+                return { 
+                    allowed: false, 
+                    score: 0, 
+                    visualConfidence: visualConfidence, 
+                    transcriptConfidence: 0,
+                    reason: `Rejected by Strict Rule-Based Filter (Content matched: ${blacklistMatchedStr})` 
+                };
             }
+
+            phase2Filter.matchedWhitelist.forEach(w => totalWhitelistMatches.add(w));
+            whitelistMatchedStr = totalWhitelistMatches.size > 0 ? Array.from(totalWhitelistMatches).join(', ') : "None";
 
             if (isNSFW) {
-                return { allowed: false, score: 0, visualConfidence: 0, reason: "Visual analysis detected explicit or prohibited content." };
+                console.log(`
+==================================================
+[Moderation Debug Logs]
+Rule filter result: Pass
+Blacklist matched: None
+Whitelist matched: ${whitelistMatchedStr}
+AI score: 0
+Transcript score: 0
+Visual score: 0 (NSFW)
+Final moderation decision: rejected
+==================================================`);
+                return { allowed: false, score: 0, visualConfidence: 0, transcriptConfidence: 0, reason: "Visual analysis detected explicit or prohibited content." };
             }
 
-            // NLP Classification
+            // 5. NLP Combined Scoring
+            const combinedText = `${metadataText} ${contentText}`.toLowerCase();
             const nlpClass = this.classifier.classify(combinedText);
             
             let finalScore = 50;
-            let transcriptConfidence = 50;
 
             if (nlpClass === 'educational') {
                 finalScore += 30; // base edu boost
@@ -207,19 +319,37 @@ class AIClassifier {
                 transcriptConfidence = 20;
             }
 
-            // If we have transcript/OCR and it matches edu words
-            const EDU_WORDS = ['tutorial', 'lecture', 'coding', 'dsa', 'dbms', 'java', 'react', 'machine learning', 'science', 'math'];
-            const matchedEduWords = EDU_WORDS.filter(w => combinedText.includes(w));
-            if (matchedEduWords.length > 2) {
+            if (totalWhitelistMatches.size >= 2) {
                 finalScore += 20;
+            } else if (totalWhitelistMatches.size === 1) {
+                finalScore += 10;
             }
 
             // Cap scores
             finalScore = Math.min(100, Math.max(0, finalScore));
+            aiScore = finalScore;
 
-            console.log(`[AIClassifier] Analysis done. Score: ${finalScore}, NLP: ${nlpClass}`);
+            // Strict Final Approval Logic
+            let allowed = false;
+            // Require finalScore >= 80, transcript >= 50, visual == 100
+            if (finalScore >= 80 && transcriptConfidence >= 50 && visualConfidence === 100) {
+                allowed = true;
+                finalDecision = "approved";
+            }
 
-            if (finalScore < 75) {
+            console.log(`
+==================================================
+[Moderation Debug Logs]
+Rule filter result: Pass
+Blacklist matched: None
+Whitelist matched: ${whitelistMatchedStr}
+AI score: ${aiScore}
+Transcript score: ${transcriptConfidence}
+Visual score: ${visualConfidence}
+Final moderation decision: ${finalDecision}
+==================================================`);
+
+            if (!allowed) {
                 return { 
                     allowed: false, 
                     score: finalScore, 
