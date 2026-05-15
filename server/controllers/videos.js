@@ -11,9 +11,9 @@ const AIClassifier = require('../services/AIClassifier');
 // ─── Cloudinary availability check ────────────────────────────────────────────
 const cloudinaryConfigured = () =>
     !!(process.env.CLOUDINARY_CLOUD_NAME &&
-       process.env.CLOUDINARY_CLOUD_NAME !== 'your_cloud_name' &&
-       process.env.CLOUDINARY_API_KEY &&
-       process.env.CLOUDINARY_API_KEY !== 'your_api_key');
+        process.env.CLOUDINARY_CLOUD_NAME !== 'your_cloud_name' &&
+        process.env.CLOUDINARY_API_KEY &&
+        process.env.CLOUDINARY_API_KEY !== 'your_api_key');
 
 // ─── Smart upload: Cloudinary if configured, else save locally ────────────────
 const saveFile = async (buffer, originalName, subfolder, resourceType = 'auto') => {
@@ -54,7 +54,7 @@ const checkYouTubeCategory = async (url) => {
         const genre = $('meta[itemprop="genre"]').attr('content');
         const categoryMatch = data.match(/"category":"(.*?)"/);
         const foundCategory = genre || (categoryMatch && categoryMatch[1]) || 'Unknown';
-        
+
         const title = $('title').text() || $('meta[name="title"]').attr('content') || '';
         const description = $('meta[name="description"]').attr('content') || '';
 
@@ -62,16 +62,16 @@ const checkYouTubeCategory = async (url) => {
         let isEdu = EDU_CATEGORIES.includes(foundCategory);
         if (foundCategory === 'Unknown') isEdu = true; // Let AIClassifier decide if category is missing
 
-        return { 
-            isEdu, 
-            fetchedTitle: title, 
-            fetchedDesc: description 
+        return {
+            isEdu,
+            fetchedTitle: title,
+            fetchedDesc: description
         };
-    } catch (error) { 
+    } catch (error) {
         console.error('YouTube Fetch Warning (non-fatal):', error.message);
         // If YouTube blocks the request (e.g., 429 Too Many Requests), don't fail the upload.
         // Instead, assume true and let the AIClassifier handle title/desc validation.
-        return { isEdu: true, fetchedTitle: '', fetchedDesc: '' }; 
+        return { isEdu: true, fetchedTitle: '', fetchedDesc: '' };
     }
 };
 
@@ -83,12 +83,12 @@ const formatVideo = (video) => ({
 });
 
 // ─── GET ALL VIDEOS ────────────────────────────────────────────────────────────
-const { Op } = require('sequelize'); // Make sure Op is available
+//const { Op } = require('sequelize'); // Make sure Op is available
 
 const getAllVideos = async (req, res) => {
     try {
         console.log(`[GET /api/videos] Request received. User authenticated: ${req.user ? 'Yes (' + req.user.id + ')' : 'No (Guest)'}`);
-        
+
         // Determine moderation feature launch date (e.g. May 11, 2026) for legacy null check
         const MODERATION_LAUNCH_DATE = new Date('2026-05-11T00:00:00.000Z');
 
@@ -101,9 +101,9 @@ const getAllVideos = async (req, res) => {
                 [Op.or]: [
                     { status: 'approved', isEducational: true },
                     { status: 'approved', reviewedByAI: false },
-                    { 
-                        status: null, 
-                        createdAt: { [Op.lt]: MODERATION_LAUNCH_DATE } 
+                    {
+                        status: null,
+                        createdAt: { [Op.lt]: MODERATION_LAUNCH_DATE }
                     }
                 ]
             },
@@ -113,7 +113,7 @@ const getAllVideos = async (req, res) => {
             ],
             order: [['createdAt', 'DESC']]
         });
-        
+
         console.log(`[GET /api/videos] Successfully fetched ${videos.length} videos from the global Video table.`);
         res.json(videos.map(formatVideo));
     } catch (err) {
@@ -158,7 +158,7 @@ const uploadVideo = async (req, res) => {
         const isExternal = req.body.isExternal === 'true';
         let videoUrl = '';
         let sourceType = 'upload';
-        
+
         let title = req.body.title || '';
         let description = req.body.description || '';
         let tags = '';
