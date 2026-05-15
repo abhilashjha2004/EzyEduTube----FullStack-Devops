@@ -79,8 +79,8 @@ const Home = () => {
         console.log(`[Home.jsx] Fetching videos from: ${import.meta.env.VITE_API_URL}/api/videos`);
         axios.get(`${import.meta.env.VITE_API_URL}/api/videos`)
             .then(res => {
-                console.log(`[Home.jsx] Successfully fetched ${res.data.length} videos from backend.`);
-                setVideos(res.data);
+                console.log(`[Home.jsx] Successfully fetched ${res.data?.length || 0} videos from backend.`);
+                setVideos(Array.isArray(res.data) ? res.data : []);
             })
             .catch(err => {
                 console.error('[Home.jsx] Failed to fetch videos:', err.response?.data || err.message);
@@ -91,16 +91,16 @@ const Home = () => {
     // ── Filtered + sorted list ─────────────────────────────────────────────
     const filtered = useMemo(() => {
         const stream = STREAMS.find(s => s.label === activeStream) || STREAMS[0];
-        let data = videos.filter(v => videoMatchesStream(v, stream));
+        let data = (Array.isArray(videos) ? videos : []).filter(v => videoMatchesStream(v, stream));
 
         // Search filter
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             data = data.filter(v =>
-                v.title?.toLowerCase().includes(q) ||
-                v.uploader?.username?.toLowerCase().includes(q) ||
-                v.description?.toLowerCase().includes(q) ||
-                (v.subject || '').toLowerCase().includes(q)
+                v?.title?.toLowerCase().includes(q) ||
+                v?.uploader?.username?.toLowerCase().includes(q) ||
+                v?.description?.toLowerCase().includes(q) ||
+                (v?.subject || '').toLowerCase().includes(q)
             );
         }
 
@@ -115,10 +115,11 @@ const Home = () => {
     // ── Per-stream video counts (for badge) ────────────────────────────────
     const streamCounts = useMemo(() => {
         const counts = {};
+        const safeVideos = Array.isArray(videos) ? videos : [];
         STREAMS.forEach(s => {
             counts[s.label] = s.label === 'All'
-                ? videos.length
-                : videos.filter(v => videoMatchesStream(v, s)).length;
+                ? safeVideos.length
+                : safeVideos.filter(v => videoMatchesStream(v, s)).length;
         });
         return counts;
     }, [videos]);
@@ -252,7 +253,7 @@ const Home = () => {
 
                 {/* Result pill */}
                 <span className="ml-auto text-xs font-medium px-3 py-1.5 rounded-full bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border border-violet-100 dark:border-violet-800">
-                    {filtered.length} video{filtered.length !== 1 ? 's' : ''}
+                    {(Array.isArray(filtered) ? filtered : []).length} video{(Array.isArray(filtered) ? filtered : []).length !== 1 ? 's' : ''}
                     {activeStream !== 'All' ? ` · ${activeStream}` : ''}
                     {searchQuery ? ` · "${searchQuery}"` : ''}
                 </span>
@@ -260,7 +261,7 @@ const Home = () => {
 
             {/* ── Video Grid ──────────────────────────────────────────── */}
             <div id="video-grid">
-                {filtered.length === 0 ? (
+                {!(Array.isArray(filtered) && filtered.length > 0) ? (
                     <div className="text-center py-24 space-y-4">
                         <div className="text-6xl">🎓</div>
                         <h2 className="text-2xl font-bold text-zinc-700 dark:text-zinc-300">No videos found</h2>
@@ -291,7 +292,7 @@ const Home = () => {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8">
-                        {filtered.map(video => (
+                        {(Array.isArray(filtered) ? filtered : []).map(video => (
                             <VideoCard key={video._id} video={video} />
                         ))}
                     </div>

@@ -24,3 +24,8 @@ Thumbs.db
 
 # Scraping cache
 *-player-script.js
+
+
+server/.env.docker
+
+client/.env.docker

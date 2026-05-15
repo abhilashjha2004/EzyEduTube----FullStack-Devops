@@ -1,78 +1,56 @@
-version: '3.8'
-
 services:
-  # NGINX Reverse Proxy (exposes 80 to the host, routes to frontend and api)
+
   nginx:
     build:
       context: ./nginx
       dockerfile: Dockerfile
+
     ports:
       - "80:80"
+
     depends_on:
       - frontend
       - api
+
     networks:
       - ezyedutube-network
+
     restart: always
 
-  # Frontend: React Vite App (served internally by its own nginx on port 80)
   frontend:
-    image: ${DOCKER_HUB_USERNAME:-local}/ezyedutube-frontend:latest
     build:
       context: ./client
       dockerfile: Dockerfile
+
     expose:
       - "80"
+
+    env_file:
+      - ./client/.env.docker
+
     networks:
       - ezyedutube-network
+
     restart: always
 
-  # Backend: Node.js API
   api:
-    image: ${DOCKER_HUB_USERNAME:-local}/ezyedutube-backend:latest
     build:
       context: ./server
       dockerfile: Dockerfile
+
     expose:
       - "5000"
-    environment:
-      - PORT=5000
-      - DB_HOST=mysql
-      - DB_USER=root
-      - DB_PASSWORD=root
-      - DB_NAME=ezyedutube
-      - NODE_ENV=production
+
     env_file:
-      - ./server/.env
-    networks:
-      - ezyedutube-network
-    depends_on:
-      mysql:
-        condition: service_healthy
-    restart: always
+      - ./server/.env.docker
 
-  # MySQL Database
-  mysql:
-    image: mysql:8.0
-    expose:
-      - "3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=ezyedutube
-    volumes:
-      - mysql-data:/var/lib/mysql
+      - DOCKER_ENV=true
+
     networks:
       - ezyedutube-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: always
 
-volumes:
-  mysql-data:
+    restart: always
 
 networks:
   ezyedutube-network:

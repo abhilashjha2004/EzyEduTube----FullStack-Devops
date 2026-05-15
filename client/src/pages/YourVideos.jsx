@@ -14,7 +14,7 @@ const YourVideos = () => {
         const fetchMyVideos = async () => {
             try {
                 const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/videos`);
-                const mine = res.data.filter(v => v.uploader?._id === user?._id || v.uploader === user?._id);
+                const mine = (Array.isArray(res.data) ? res.data : []).filter(v => v.uploader?._id === user?._id || v.uploader === user?._id);
                 setVideos(mine);
             } catch (err) {
                 console.error('Failed to load your videos', err);
@@ -44,7 +44,7 @@ const YourVideos = () => {
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Your Videos</h1>
-                        <p className="text-sm text-zinc-500">{videos.length} video{videos.length !== 1 ? 's' : ''} uploaded</p>
+                        <p className="text-sm text-zinc-500">{(Array.isArray(videos) ? videos : []).length} video{(Array.isArray(videos) ? videos : []).length !== 1 ? 's' : ''} uploaded</p>
                     </div>
                 </div>
                 <Link to="/upload">
@@ -61,7 +61,7 @@ const YourVideos = () => {
                         <div key={i} className="rounded-xl bg-zinc-100 dark:bg-zinc-800 animate-pulse aspect-video" />
                     ))}
                 </div>
-            ) : videos.length === 0 ? (
+            ) : (Array.isArray(videos) ? videos : []).length === 0 ? (
                 <div className="text-center py-24 space-y-3">
                     <Video size={48} className="mx-auto text-zinc-300 dark:text-zinc-600" />
                     <h2 className="text-xl font-semibold text-zinc-500">No videos yet</h2>
@@ -72,7 +72,7 @@ const YourVideos = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8">
-                    {videos.map(video => (
+                    {(Array.isArray(videos) ? videos : []).map(video => (
                         <Link key={video._id} to={`/resource/${video._id}`} className="group flex flex-col gap-3">
                             <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-800">
                                 <img

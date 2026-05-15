@@ -7,11 +7,11 @@ const Downloads = () => {
 
     useEffect(() => {
         const stored = JSON.parse(localStorage.getItem('ezyedutube_downloads') || '[]');
-        setDownloads(stored);
+        setDownloads(Array.isArray(stored) ? stored : []);
     }, []);
 
     const removeItem = (id, dt) => {
-        const updated = downloads.filter(d => !(d.id === id && d.downloadedAt === dt));
+        const updated = (Array.isArray(downloads) ? downloads : []).filter(d => !(d.id === id && d.downloadedAt === dt));
         localStorage.setItem('ezyedutube_downloads', JSON.stringify(updated));
         setDownloads(updated);
     };
@@ -38,10 +38,10 @@ const Downloads = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl font-extrabold">Downloads</h1>
-                            <p className="text-cyan-100 text-sm">{downloads.length} download{downloads.length !== 1 ? 's' : ''} saved</p>
+                            <p className="text-cyan-100 text-sm">{(Array.isArray(downloads) ? downloads : []).length} download{(Array.isArray(downloads) ? downloads : []).length !== 1 ? 's' : ''} saved</p>
                         </div>
                     </div>
-                    {downloads.length > 0 && (
+                    {(Array.isArray(downloads) ? downloads : []).length > 0 && (
                         <button onClick={clearAll}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-sm font-semibold transition backdrop-blur-sm border border-white/20">
                             <Trash2 size={14} /> Clear All
@@ -50,10 +50,10 @@ const Downloads = () => {
                 </div>
 
                 {/* Stats row */}
-                {downloads.length > 0 && (
+                {(Array.isArray(downloads) ? downloads : []).length > 0 && (
                     <div className="flex gap-4 mt-5 pt-4 border-t border-white/20">
                         {['1080p', '720p', '480p'].map(q => {
-                            const count = downloads.filter(d => d.quality === q).length;
+                            const count = (Array.isArray(downloads) ? downloads : []).filter(d => d.quality === q).length;
                             return count > 0 ? (
                                 <div key={q} className="text-center">
                                     <p className="text-xl font-extrabold">{count}</p>
@@ -66,7 +66,7 @@ const Downloads = () => {
             </div>
 
             {/* List */}
-            {downloads.length === 0 ? (
+            {(Array.isArray(downloads) ? downloads : []).length === 0 ? (
                 <div className="text-center py-24 space-y-4">
                     <div className="text-7xl">📥</div>
                     <h2 className="text-xl font-bold text-zinc-500">No downloads yet</h2>
@@ -74,7 +74,7 @@ const Downloads = () => {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {downloads.map((item, i) => (
+                    {(Array.isArray(downloads) ? downloads : []).map((item, i) => (
                         <div key={`${item.id}-${item.downloadedAt}`}
                             className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl hover:shadow-lg hover:border-cyan-200 dark:hover:border-cyan-800 transition-all group card-hover">
                             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-md flex-shrink-0">

@@ -8,12 +8,12 @@ const History = () => {
 
     useEffect(() => {
         const stored = JSON.parse(localStorage.getItem('ezyedutube_history') || '[]');
-        setHistory(stored);
+        setHistory(Array.isArray(stored) ? stored : []);
     }, []);
 
     const clearHistory = () => { localStorage.removeItem('ezyedutube_history'); setHistory([]); };
     const removeItem = (id) => {
-        const updated = history.filter(h => h.id !== id);
+        const updated = (Array.isArray(history) ? history : []).filter(h => h.id !== id);
         localStorage.setItem('ezyedutube_history', JSON.stringify(updated));
         setHistory(updated);
     };
@@ -30,10 +30,10 @@ const History = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl font-extrabold">Watch History</h1>
-                            <p className="text-violet-100 text-sm">{history.length} video{history.length !== 1 ? 's' : ''} watched</p>
+                            <p className="text-violet-100 text-sm">{(Array.isArray(history) ? history : []).length} video{(Array.isArray(history) ? history : []).length !== 1 ? 's' : ''} watched</p>
                         </div>
                     </div>
-                    {history.length > 0 && (
+                    {(Array.isArray(history) ? history : []).length > 0 && (
                         <button onClick={clearHistory}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-sm font-semibold transition backdrop-blur-sm border border-white/20">
                             <Trash2 size={14} /> Clear All
@@ -43,7 +43,7 @@ const History = () => {
             </div>
 
             {/* List */}
-            {history.length === 0 ? (
+            {(Array.isArray(history) ? history : []).length === 0 ? (
                 <div className="text-center py-24 space-y-4">
                     <div className="text-7xl">📺</div>
                     <h2 className="text-xl font-bold text-zinc-500">No watch history yet</h2>
@@ -54,7 +54,7 @@ const History = () => {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {history.map((item, i) => (
+                    {(Array.isArray(history) ? history : []).map((item, i) => (
                         <div key={item.id}
                             className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl hover:shadow-lg hover:border-violet-200 dark:hover:border-violet-800 transition-all group card-hover">
                             {/* Number badge */}

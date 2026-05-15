@@ -351,7 +351,8 @@ const ResourceDetail = () => {
 
     const recommended = useMemo(() => {
         if (!videoData || !allVideos.length) return [];
-        const others = allVideos.filter(v => v._id !== videoData._id);
+        const safeAllVideos = Array.isArray(allVideos) ? allVideos : [];
+        const others = safeAllVideos.filter(v => v._id !== videoData._id);
         const sameSubject = others.filter(v => v.subject && v.subject === videoData.subject);
         const sameUploader = others.filter(v =>
             v.uploader?._id === videoData.uploader?._id && !sameSubject.find(s => s._id === v._id)
@@ -367,7 +368,8 @@ const ResourceDetail = () => {
         if (!videoData) return;
         const entry = { id: videoData._id, title: videoData.title, thumbnail: videoData.thumbnailUrl, uploader: videoData.uploader?.username, watchedAt: new Date().toISOString() };
         const prev = JSON.parse(localStorage.getItem('ezyedutube_history') || '[]');
-        localStorage.setItem('ezyedutube_history', JSON.stringify([entry, ...prev.filter(h => h.id !== videoData._id)].slice(0, 50)));
+        const safePrev = Array.isArray(prev) ? prev : [];
+        localStorage.setItem('ezyedutube_history', JSON.stringify([entry, ...safePrev.filter(h => h.id !== videoData._id)].slice(0, 50)));
     }, [videoData]);
 
     const handleLike = useCallback(async () => {
@@ -399,7 +401,7 @@ const ResourceDetail = () => {
         if (!comment.trim()) return;
         try {
             const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/${id}/comments`, { userId: user._id, content: comment });
-            setComments(prev => [res.data, ...prev]);
+            setComments(prev => [res.data, ...(Array.isArray(prev) ? prev : [])]);
             setComment('');
         } catch { }
     };
@@ -616,7 +618,7 @@ const ResourceDetail = () => {
                                 <FileText size={15} className="text-red-500" /> Practice Materials
                             </h3>
                             <div className="space-y-2">
-                                {videoData.resources.map((res, i) => (
+                                {(Array.isArray(videoData.resources) ? videoData.resources : []).map((res, i) => (
                                     <a key={i} href={res.url} target="_blank" rel="noreferrer"
                                         className="flex items-center justify-between p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition group">
                                         <div className="flex items-center gap-3 overflow-hidden">
@@ -632,7 +634,7 @@ const ResourceDetail = () => {
 
                     {/* Comments */}
                     <div className="pt-2">
-                        <h3 className="text-lg font-bold mb-4">{comments.length} Comment{comments.length !== 1 ? 's' : ''}</h3>
+                        <h3 className="text-lg font-bold mb-4">{(Array.isArray(comments) ? comments : []).length} Comment{(Array.isArray(comments) ? comments : []).length !== 1 ? 's' : ''}</h3>
                         {user ? (
                             <form onSubmit={handleComment} className="flex gap-3 mb-8">
                                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
@@ -657,7 +659,7 @@ const ResourceDetail = () => {
                             </p>
                         )}
                         <div className="space-y-5">
-                            {comments.map(c => (
+                            {(Array.isArray(comments) ? comments : []).map(c => (
                                 <div key={c._id} className="flex gap-3">
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                                         {c.user?.username?.[0]?.toUpperCase() || 'U'}
@@ -689,7 +691,7 @@ const ResourceDetail = () => {
                             )}
                         </div>
                         <div className="p-2">
-                            {recommended.length === 0 ? (
+                            {(Array.isArray(recommended) ? recommended : []).length === 0 ? (
                                 <div className="py-8 text-center space-y-2">
                                     <div className="text-3xl">🎓</div>
                                     <p className="text-xs text-zinc-400">No other videos yet.</p>
@@ -697,7 +699,7 @@ const ResourceDetail = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-0.5">
-                                    {recommended.map((video, i) => (
+                                    {(Array.isArray(recommended) ? recommended : []).map((video, i) => (
                                         <motion.div key={video._id}
                                             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: i * 0.05 }}>

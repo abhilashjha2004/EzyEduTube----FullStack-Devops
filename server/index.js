@@ -99,7 +99,8 @@ const startServer = async () => {
             console.log(`🚀  Server running on port ${PORT}`);
         });
     } catch (err) {
-        console.error('❌  Critical Server Error:', err.message);
+        console.error('❌  Critical Server Error:');
+        console.error(err);
         process.exit(1);
     }
 };

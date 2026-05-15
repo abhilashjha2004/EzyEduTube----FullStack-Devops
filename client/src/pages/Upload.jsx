@@ -92,7 +92,7 @@ const Upload = () => {
     };
 
     const removeResource = (index) => {
-        setResources(prev => prev.filter((_, i) => i !== index));
+        setResources(prev => (Array.isArray(prev) ? prev : []).filter((_, i) => i !== index));
     };
 
     const uploadToCloudinaryDirectly = async (file, folder) => {
@@ -363,7 +363,7 @@ const Upload = () => {
                         </label>
                     </div>
                     <div className="space-y-2">
-                        {resources.map((file, i) => (
+                        {(Array.isArray(resources) ? resources : []).map((file, i) => (
                             <div key={i} className="flex items-center justify-between p-3 border rounded-lg dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
                                 <div className="flex items-center gap-3">
                                     <FileText size={18} className="text-orange-500" />

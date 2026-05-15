@@ -1,62 +1,49 @@
-name: Deploy EzyEduTube to Production
+name: EzyEduTube CI/CD
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build-and-push:
+  build-and-test:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+      - name: Setup Node.js (Frontend)
+        uses: actions/setup-node@v4
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './client/package-lock.json'
 
-      - name: Build and push Frontend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./client
-          push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/ezyedutube-frontend:latest
+      - name: Install Frontend Dependencies
+        working-directory: ./client
+        run: npm ci
 
-      - name: Build and push Backend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./server
-          push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/ezyedutube-backend:latest
+      - name: Build Frontend
+        working-directory: ./client
+        run: npm run build
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v0.1.10
+      - name: Setup Node.js (Backend)
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            # Navigate to the project directory
-            cd ~/EzyEduTube
-            
-            # Pull the latest code (for docker-compose.yml and nginx.conf)
-            git pull origin main
-            
-            # Export the username so docker-compose knows which images to pull
-            export DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
-            
-            # Pull the latest Docker images from Docker Hub
-            docker-compose pull
-            
-            # Restart the containers with the new images
-            docker-compose up -d
-            
-            # Clean up old unused images
-            docker image prune -f
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './server/package-lock.json'
+
+      - name: Install Backend Dependencies
+        working-directory: ./server
+        run: npm ci --omit=dev
+
+      - name: Validate Docker Compose Syntax
+        run: docker compose config
+
+      - name: Build Docker Images (Dry Run)
+        run: docker compose build --no-cache

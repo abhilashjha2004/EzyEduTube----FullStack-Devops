@@ -24,7 +24,7 @@ const Profile = () => {
             // Rapid prototype: Fetch all and filter
             try {
                 const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/resources`);
-                const mine = res.data.filter(r => r.uploader === user.username);
+                const mine = (Array.isArray(res.data) ? res.data : []).filter(r => r.uploader === user.username);
                 setMyResources(mine);
             } catch (err) {
                 console.error(err);
@@ -68,12 +68,12 @@ const Profile = () => {
 
             <div className="">
                 <h2 className="text-2xl font-bold mb-6 flex items-center">
-                    My Contributions <span className="ml-3 text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">{myResources.length}</span>
+                    My Contributions <span className="ml-3 text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">{(Array.isArray(myResources) ? myResources : []).length}</span>
                 </h2>
 
                 {loading ? (
                     <div className="text-center py-10">Loading...</div>
-                ) : myResources.length === 0 ? (
+                ) : (Array.isArray(myResources) ? myResources : []).length === 0 ? (
                     <div className="text-center py-12 border-2 border-dashed rounded-lg">
                         <p className="text-muted-foreground mb-4">You haven't uploaded any educational resources yet.</p>
                         <Link to="/upload" className="text-primary font-medium hover:underline">Share your knowledge now</Link>
@@ -84,7 +84,7 @@ const Profile = () => {
                         animate={{ opacity: 1 }}
                         className="grid grid-cols-1 md:grid-cols-3 gap-6"
                     >
-                        {myResources.map((res, index) => (
+                        {(Array.isArray(myResources) ? myResources : []).map((res, index) => (
                             <motion.div
                                 key={res._id}
                                 initial={{ opacity: 0, scale: 0.9 }}
