@@ -77,16 +77,11 @@ const uploadToCloudinary = (buffer, folder, resourceType = 'auto') => {
     });
 };
 
-const generateSignature = (paramsToSign) => {
-    return cloudinary.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET);
-};
-
 module.exports = {
     cloudinary,
     uploadVideo,
     uploadImage,
     uploadDocument,
     uploadVideoFields,
-    uploadToCloudinary,
-    generateSignature
+    uploadToCloudinary
 };

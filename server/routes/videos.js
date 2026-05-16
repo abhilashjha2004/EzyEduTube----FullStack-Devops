@@ -4,7 +4,7 @@ const multer = require('multer');
 const authMiddleware = require('../middleware/authMiddleware');
 const isAdmin = require('../middleware/isAdmin');
 const videoController = require('../controllers/videos');
-const { uploadVideoFields, generateSignature } = require('../config/cloudinary');
+const { uploadVideoFields } = require('../config/cloudinary');
 const { uploadLimiter } = require('../middleware/rateLimiter');
 
 // --- ROUTES ---
@@ -15,20 +15,6 @@ router.get('/', videoController.getAllVideos);
 // GET SINGLE VIDEO
 router.get('/:id', videoController.getVideoById);
 
-// GET UPLOAD SIGNATURE
-router.get('/upload-signature', authMiddleware, (req, res) => {
-    const timestamp = Math.round((new Date).getTime() / 1000);
-    const signature = generateSignature({ timestamp, folder: 'ezyedutube/videos' });
-    res.json({ timestamp, signature, cloudName: process.env.CLOUDINARY_CLOUD_NAME, apiKey: process.env.CLOUDINARY_API_KEY });
-});
-
-// GET UPLOAD SIGNATURE FOR RESOURCES
-router.get('/upload-signature/:folder', authMiddleware, (req, res) => {
-    const folder = req.params.folder === 'documents' ? 'ezyedutube/documents' : 'ezyedutube/thumbnails';
-    const timestamp = Math.round((new Date).getTime() / 1000);
-    const signature = generateSignature({ timestamp, folder });
-    res.json({ timestamp, signature, cloudName: process.env.CLOUDINARY_CLOUD_NAME, apiKey: process.env.CLOUDINARY_API_KEY });
-});
 
 // UPLOAD VIDEO (Handles direct cloudinary URLs and final backend processing)
 // We still pass uploadVideoFields just in case local fallback is used or thumbnails/resources are sent

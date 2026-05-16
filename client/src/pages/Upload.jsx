@@ -97,23 +97,14 @@ const Upload = () => {
 
     const uploadToCloudinaryDirectly = async (file, folder) => {
         try {
-            // 1. Get Signature from backend
-            const sigRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/videos/upload-signature${folder === 'ezyedutube/videos' ? '' : '/' + folder.split('/')[1]}`);
-            const { timestamp, signature, cloudName, apiKey } = sigRes.data;
+            const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dseo7ljtx';
+            const uploadPreset = 'ezyedutube'; // Unsigned preset
 
-            // 2. Upload directly to Cloudinary
+            // Upload directly to Cloudinary
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('api_key', apiKey);
-            formData.append('timestamp', timestamp);
-            formData.append('signature', signature);
+            formData.append('upload_preset', uploadPreset);
             formData.append('folder', folder);
-            
-            // Eager transformations for optimization
-            if (folder.includes('videos')) {
-                formData.append('eager', 'q_auto,f_auto,vc_h264');
-                formData.append('eager_async', 'true');
-            }
 
             const resourceType = folder.includes('videos') ? 'video' : folder.includes('thumbnails') ? 'image' : 'raw';
 
