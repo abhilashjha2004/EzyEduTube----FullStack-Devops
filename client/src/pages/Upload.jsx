@@ -19,7 +19,7 @@ const SUBJECT_OPTIONS = [
 const Upload = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    
+
     // Upload States
     const [loading, setLoading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState(''); // 'cloudinary', 'backend', 'success'
@@ -40,7 +40,7 @@ const Upload = () => {
 
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [resources, setResources] = useState([]);
-    
+
     const [error, setError] = useState('');
     const [warning, setWarning] = useState('This platform only accepts strictly educational content. Entertainment, gaming, and music will be rejected by our AI moderator.');
 
@@ -108,16 +108,27 @@ const Upload = () => {
 
             const resourceType = folder.includes('videos') ? 'video' : folder.includes('thumbnails') ? 'image' : 'raw';
 
-            const res = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, formData, {
-                onUploadProgress: (progressEvent) => {
-                    if (folder.includes('videos')) {
-                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                        setUploadProgress(percentCompleted);
-                    }
+            const response = await fetch(
+                `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
+                {
+                    method: "POST",
+                    body: formData
                 }
-            });
+            );
 
-            return res.data.secure_url;
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error(data);
+                throw new Error(data.error?.message || "Cloudinary upload failed");
+            }
+
+            if (folder.includes('videos')) {
+                setUploadProgress(100);
+            }
+
+            return data.secure_url;
+
         } catch (err) {
             console.error("Cloudinary upload error:", err);
             throw new Error('Failed to upload file to Cloudinary. Please check your network and try again.');
@@ -158,15 +169,15 @@ const Upload = () => {
 
             // 2. Send metadata to our backend for AI Moderation & DB Saving
             setUploadStatus('backend');
-            setUploadProgress(100); 
-            
+            setUploadProgress(100);
+
             // Send as FormData so multer intercepts and parses req.body correctly
             const formData = new FormData();
             formData.append('title', title);
             formData.append('description', description);
             formData.append('subject', subject);
             formData.append('isExternal', uploadMode === 'link' ? 'true' : 'false');
-            
+
             if (uploadMode === 'link') {
                 formData.append('externalLink', externalLink);
             } else {
@@ -180,7 +191,7 @@ const Upload = () => {
             await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/upload`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            
+
             setUploadStatus('success');
             setTimeout(() => {
                 navigate('/');
@@ -215,7 +226,7 @@ const Upload = () => {
                     {error}
                 </div>
             )}
-            
+
             {uploadStatus === 'success' && (
                 <div className="bg-green-500/10 border border-green-500 text-green-600 p-4 rounded-xl mb-6 flex items-center gap-2">
                     <CheckCircle2 size={20} />
@@ -381,7 +392,7 @@ const Upload = () => {
                             </div>
                         </div>
                     )}
-                    
+
                     {loading && uploadStatus === 'backend' && (
                         <div className="mb-4 text-center text-sm font-medium text-orange-500 animate-pulse">
                             AI moderation in progress...
