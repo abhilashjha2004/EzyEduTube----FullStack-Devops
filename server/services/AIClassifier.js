@@ -144,7 +144,8 @@ class AIClassifier {
             'funny', 'prank', 'gaming', 'gameplay', 'pubg', 'free fire', 
             'minecraft', 'fortnite', 'reaction', 'vlog', 'shorts', 'reels', 
             'status video', 'viral', 'actor', 'actress', 'celebrity', 
-            'item song', 'album song', 'khesari', 'pawan', 'bhojpuriya'
+            'item song', 'album song', 'khesari', 'pawan', 'bhojpuriya',
+            'ipl', 'cricket', 'football', 'sports', 'meme', 'entertainment', 'highlights', 'match', 'tournament'
         ];
 
         const WHITELIST = [
@@ -204,13 +205,12 @@ class AIClassifier {
             
             console.log(`
 ==================================================
-[Moderation Debug Logs]
+[DEBUG: AIClassifier] Phase 1 Reject
+Video URL: ${videoUrl}
+Title: ${title}
 Rule filter result: ${ruleFilterResult}
 Blacklist matched: ${blacklistMatchedStr}
 Whitelist matched: ${whitelistMatchedStr}
-AI score: N/A
-Transcript score: N/A
-Visual score: N/A
 Final moderation decision: ${finalDecision}
 ==================================================`);
             
@@ -241,11 +241,17 @@ Final moderation decision: ${finalDecision}
                     // 3. Run HF Visual Moderation (if API key provided)
                     const visualLabels = await this.classifyImageHF(frame);
                     if (visualLabels && Array.isArray(visualLabels)) {
-                        // Look for 'nsfw' label
-                        const nsfwLabel = visualLabels.find(l => l.label === 'nsfw');
-                        if (nsfwLabel && nsfwLabel.score > 0.6) {
-                            isNSFW = true;
-                            visualConfidence = 0;
+                        console.log(`[AIClassifier] Frame visual labels:`, JSON.stringify(visualLabels));
+                        for (const l of visualLabels) {
+                            const labelName = l.label.toLowerCase();
+                            if (['nsfw', 'porn', 'hentai'].includes(labelName) && l.score > 0.6) {
+                                isNSFW = true;
+                                visualConfidence = 0;
+                            }
+                            if (['sports', 'sport', 'cricket', 'football', 'gameplay', 'game', 'entertainment'].includes(labelName) && l.score > 0.35) {
+                                isNSFW = true; // Using this flag to trigger rejection
+                                visualConfidence = 0;
+                            }
                         }
                     }
                 }
@@ -268,12 +274,14 @@ Final moderation decision: ${finalDecision}
                 
                 console.log(`
 ==================================================
-[Moderation Debug Logs]
+[DEBUG: AIClassifier] Phase 2 Reject
+Video URL: ${videoUrl}
+Title: ${title}
+OCR Text: ${ocrTextCombined.substring(0, 50)}...
+Transcript: ${transcript.substring(0, 50)}...
 Rule filter result: ${ruleFilterResult}
 Blacklist matched: ${blacklistMatchedStr}
 Whitelist matched: ${whitelistMatchedStr}
-AI score: N/A
-Transcript score: N/A
 Visual score: ${visualConfidence}
 Final moderation decision: ${finalDecision}
 ==================================================`);
@@ -293,21 +301,25 @@ Final moderation decision: ${finalDecision}
             if (isNSFW) {
                 console.log(`
 ==================================================
-[Moderation Debug Logs]
-Rule filter result: Pass
+[DEBUG: AIClassifier]
+Video URL: ${videoUrl}
+Rule filter: Pass
 Blacklist matched: None
 Whitelist matched: ${whitelistMatchedStr}
+OCR Text: ${ocrTextCombined.substring(0, 50)}...
+Transcript: ${transcript.substring(0, 50)}...
 AI score: 0
 Transcript score: 0
-Visual score: 0 (NSFW)
+Visual score: 0 (Sports/Entertainment/NSFW detected > 35%)
 Final moderation decision: rejected
 ==================================================`);
-                return { allowed: false, score: 0, visualConfidence: 0, transcriptConfidence: 0, reason: "Visual analysis detected explicit or prohibited content." };
+                return { allowed: false, score: 0, visualConfidence: 0, transcriptConfidence: 0, reason: "Visual analysis detected explicit, sports, gaming, or entertainment content." };
             }
 
             // 5. NLP Combined Scoring
             const combinedText = `${metadataText} ${contentText}`.toLowerCase();
             const nlpClass = this.classifier.classify(combinedText);
+            console.log(`[DEBUG: AIClassifier] NLP Classification result: ${nlpClass}`);
             
             let finalScore = 50;
 
@@ -339,11 +351,15 @@ Final moderation decision: rejected
 
             console.log(`
 ==================================================
-[Moderation Debug Logs]
+[DEBUG: AIClassifier]
+Video URL: ${videoUrl}
+Title: ${title}
+NLP Classification: ${nlpClass}
+OCR Keywords: ${ocrTextCombined.substring(0, 100)}
 Rule filter result: Pass
 Blacklist matched: None
 Whitelist matched: ${whitelistMatchedStr}
-AI score: ${aiScore}
+AI score (Confidence): ${aiScore}
 Transcript score: ${transcriptConfidence}
 Visual score: ${visualConfidence}
 Final moderation decision: ${finalDecision}

@@ -193,7 +193,11 @@ const uploadVideo = async (req, res) => {
         let thumbnailUrl = req.body.thumbnailUrl || '';
 
         // Run AI Moderation SYNCHRONOUSLY before saving to DB
-        console.log(`⏳ Starting strict synchronous AI moderation for: "${title}"`);
+        console.log(`\n==================================================`);
+        console.log(`[UPLOAD DEBUG] ⏳ Starting strict synchronous AI moderation...`);
+        console.log(`[UPLOAD DEBUG] Title: "${title}"`);
+        console.log(`[UPLOAD DEBUG] Extracted Video URL: ${videoUrl}`);
+        console.log(`==================================================\n`);
         
         const aiResult = await AIClassifier.analyzeVideoAsync({
             videoId: 'temp', // Not saved yet
@@ -204,8 +208,11 @@ const uploadVideo = async (req, res) => {
             isExternal
         });
 
+        console.log(`[UPLOAD DEBUG] AIClassifier Result: Allowed=${aiResult.allowed}, Score=${aiResult.score}`);
+
         if (!aiResult.allowed) {
-            console.log(`[Moderation] Video rejected: ${aiResult.reason}`);
+            console.log(`[UPLOAD DEBUG] ❌ Moderation Decision: REJECTED`);
+            console.log(`[UPLOAD DEBUG] 📝 Rejection Reason: ${aiResult.reason}`);
             
             // Auto-delete from Cloudinary if it was a local file upload (not an external link)
             if (!isExternal && videoUrl.includes('cloudinary.com')) {
@@ -218,20 +225,25 @@ const uploadVideo = async (req, res) => {
                     const filename = filenameWithExt.split('.')[0];
                     const publicId = `${parentFolder}/${folder}/${filename}`;
                     
-                    console.log(`[Cleanup] Auto-deleting rejected video from Cloudinary: ${publicId}`);
-                    await cloudinary.uploader.destroy(publicId, { resource_type: "video" });
+                    console.log(`[UPLOAD DEBUG] 🗑️ Triggering Cloudinary Cleanup for: ${publicId}`);
+                    const deleteResult = await cloudinary.uploader.destroy(publicId, { resource_type: "video" });
+                    console.log(`[UPLOAD DEBUG] 🗑️ Cloudinary Delete Result:`, deleteResult);
                 } catch (cleanupErr) {
-                    console.error('[Cleanup] Failed to delete video from Cloudinary:', cleanupErr);
+                    console.error('[UPLOAD DEBUG] ❌ Failed to delete video from Cloudinary:', cleanupErr);
                 }
+            } else {
+                console.log(`[UPLOAD DEBUG] Skipped Cloudinary cleanup (external link or invalid URL).`);
             }
             
             // Reject request with proper error message. Prevent DB save.
+            console.log(`[UPLOAD DEBUG] Request rejected with 400. DB save prevented.`);
             return res.status(400).json({ 
                 message: `Upload Rejected: ${aiResult.reason}` 
             });
         }
 
-        console.log(`✅ Moderation passed for: "${title}". Saving to database.`);
+        console.log(`[UPLOAD DEBUG] ✅ Moderation Decision: APPROVED for: "${title}"`);
+        console.log(`[UPLOAD DEBUG] 💾 Triggering DB Save...`);
 
         // Create approved video record in MySQL
         const newVideo = await Video.create({
