@@ -72,12 +72,7 @@ User.belongsToMany(User, {
 User.belongsToMany(Video, { through: 'VideoLikes', as: 'likedVideos', foreignKey: 'userId' });
 Video.belongsToMany(User, { through: 'VideoLikes', as: 'likedBy', foreignKey: 'videoId' });
 
-// ─── Video Views (one-to-many) ───────────────────────────────────────────────
-Video.hasMany(VideoView, { foreignKey: 'videoId', as: 'videoViews', onDelete: 'CASCADE' });
-VideoView.belongsTo(Video, { foreignKey: 'videoId', as: 'video' });
 
-User.hasMany(VideoView, { foreignKey: 'userId', as: 'videoViews' });
-VideoView.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 module.exports = {
     sequelize,
