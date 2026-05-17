@@ -28,7 +28,7 @@ const VideoView = sequelize.define('VideoView', {
         defaultValue: DataTypes.NOW
     }
 }, {
-    tableName: 'VideoViews',
+    tableName: 'videoviews',
     freezeTableName: true,
     timestamps: false
 });

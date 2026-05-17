@@ -55,22 +55,28 @@ User.hasMany(Video, { foreignKey: 'uploaderId', as: 'uploads' });
 Video.belongsTo(User, { foreignKey: 'uploaderId', as: 'uploader' });
 
 // ─── Subscriptions (self-referential many-to-many) ───────────────────────────
+const UserSubscription = sequelize.define('UserSubscription', {}, {
+    tableName: 'subscriptions',
+    freezeTableName: true,
+    timestamps: false
+});
+
 User.belongsToMany(User, {
-    through: 'Subscriptions',
+    through: UserSubscription,
     as: 'subscribers',
     foreignKey: 'channelId',
     otherKey: 'subscriberId'
 });
 User.belongsToMany(User, {
-    through: 'Subscriptions',
+    through: UserSubscription,
     as: 'subscriptions',
     foreignKey: 'subscriberId',
     otherKey: 'channelId'
 });
 
 // ─── Video Likes (many-to-many) ────────────────────────────────────────────────
-User.belongsToMany(Video, { through: 'VideoLikes', as: 'likedVideos', foreignKey: 'userId' });
-Video.belongsToMany(User, { through: 'VideoLikes', as: 'likedBy', foreignKey: 'videoId' });
+User.belongsToMany(Video, { through: 'videolikes', as: 'likedVideos', foreignKey: 'userId' });
+Video.belongsToMany(User, { through: 'videolikes', as: 'likedBy', foreignKey: 'videoId' });
 
 
 

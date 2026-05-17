@@ -12,7 +12,7 @@ const Enrollment = sequelize.define('Enrollment', {
         defaultValue: 'active'
     }
 }, {
-    tableName: 'Enrollments',
+    tableName: 'enrollments',
     freezeTableName: true,
     timestamps: true
 });

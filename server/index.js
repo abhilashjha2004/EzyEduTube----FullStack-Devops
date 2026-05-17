@@ -78,6 +78,10 @@ const startServer = async () => {
 
         // Log models loaded
         console.log('📦  Models loaded:', Object.keys(sequelize.models).join(', '));
+        Object.keys(sequelize.models).forEach(modelName => {
+            const model = sequelize.models[modelName];
+            console.log(`[DB TABLE CHECK] Model: ${modelName} -> Table: ${model.tableName}`);
+        });
         console.log('🔄  Starting Sequelize synchronization...');
 
         // Explicit try-catch around sync for detailed error logging
