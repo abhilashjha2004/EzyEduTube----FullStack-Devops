@@ -317,13 +317,15 @@ const ResourceDetail = () => {
                 if (user && v.likes) setLiked(v.likes.includes(user._id));
 
                 // Fetch uploader for subscriber count + subscription state
-                if (v.uploader?._id) {
-                    const uploaderRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/user/${v.uploader._id}`).catch(() => null);
+                const uploaderId = v.uploader?.id || v.uploader?._id;
+                if (uploaderId) {
+                    const uploaderRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/user/${uploaderId}`).catch(() => null);
                     if (!cancelled && uploaderRes) {
                         const u = uploaderRes.data;
                         setSubCount(u.subscribers?.length ?? 0);
                         if (user) {
-                            setSubscribed((u.subscribers || []).map(s => s.toString()).includes(user._id));
+                            const loggedInId = user._id || user.id;
+                            setSubscribed((u.subscribers || []).map(s => String(s)).includes(String(loggedInId)));
                         }
                     }
                 }
@@ -421,7 +423,7 @@ const ResourceDetail = () => {
             const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/videos/${id}/subscribe`, { userId: loggedInUserId });
             const backendSubscribers = res.data.subscribers;
             if (Array.isArray(backendSubscribers)) {
-                setSubscribed(backendSubscribers.includes(loggedInUserId));
+                setSubscribed(backendSubscribers.map(s => String(s)).includes(String(loggedInUserId)));
                 setSubCount(backendSubscribers.length);
             } else {
                 setSubscribed(res.data.subscribed);
