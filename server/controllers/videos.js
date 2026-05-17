@@ -7,6 +7,7 @@ const os = require('os');
 const { Video, Comment, User, Course, Document } = require('../models');
 const { uploadToCloudinary, cloudinary } = require('../config/cloudinary');
 const AIClassifier = require('../services/AIClassifier');
+const MetadataFetcher = require('../services/MetadataFetcher');
 
 // ─── Cloudinary availability check ────────────────────────────────────────────
 const cloudinaryConfigured = () =>
@@ -163,9 +164,20 @@ const uploadVideo = async (req, res) => {
         let description = req.body.description || '';
         let tags = '';
 
+        let contentType = 'Video';
+        let platform = 'Direct Upload';
+
         if (isExternal) {
             const externalLink = req.body.externalLink;
             if (!externalLink) return res.status(400).json({ message: 'External link is required' });
+
+            try {
+                const parsed = new URL(externalLink);
+                platform = parsed.hostname.replace('www.', '');
+            } catch (e) {
+                platform = 'Unknown Link';
+            }
+            contentType = 'External Link';
 
             if (externalLink.includes('youtube.com') || externalLink.includes('youtu.be')) {
                 const validation = await YouTubeValidator.validate(externalLink);
@@ -176,6 +188,13 @@ const uploadVideo = async (req, res) => {
                     title = title || validation.data.title;
                     description = description || validation.data.description;
                     tags = validation.data.tags.join(', ');
+                }
+            } else {
+                const metadata = await MetadataFetcher.fetch(externalLink);
+                title = title || metadata.title;
+                description = description || metadata.description;
+                if (metadata.tags && metadata.tags.length > 0) {
+                    tags = tags ? `${tags}, ${metadata.tags.join(', ')}` : metadata.tags.join(', ');
                 }
             }
             videoUrl = externalLink;
@@ -205,7 +224,9 @@ const uploadVideo = async (req, res) => {
             title,
             description,
             tags,
-            isExternal
+            isExternal,
+            contentType,
+            platform
         });
 
         console.log("[MODERATION RESULT]", aiResult);
@@ -239,7 +260,7 @@ const uploadVideo = async (req, res) => {
             console.log("[DB INSERT BLOCKED]");
             return res.status(400).json({ 
                 success: false,
-                message: "Non-educational content detected",
+                message: "This resource is not educational and cannot be uploaded.",
                 reason: aiResult.reason
             });
         }
@@ -249,7 +270,7 @@ const uploadVideo = async (req, res) => {
             console.log("[DB INSERT BLOCKED]");
             return res.status(400).json({
                 success: false,
-                message: "Non-educational content detected"
+                message: "This resource is not educational and cannot be uploaded."
             });
         }
 

@@ -139,23 +139,14 @@ class AIClassifier {
         if (!text) return { passed: true, matchedBlacklist: [], matchedWhitelist: [] };
         
         const BLACKLIST = [
-            'music', 'song', 'dj', 'remix', 'dance', 'romantic', 'love song', 
-            'bhojpuri', 'bollywood', 'hollywood', 'movie', 'trailer', 'comedy', 
-            'funny', 'prank', 'gaming', 'gameplay', 'pubg', 'free fire', 
-            'minecraft', 'fortnite', 'reaction', 'vlog', 'shorts', 'reels', 
-            'status video', 'viral', 'actor', 'actress', 'celebrity', 
-            'item song', 'album song', 'khesari', 'pawan', 'bhojpuriya',
-            'ipl', 'vivo ipl', 'cricket', 'football', 'sports', 'meme', 'entertainment', 
-            'highlights', 'match', 'tournament', 'rcb', 'kkr', 'mi', 'csk', 
-            'virat', 'dhoni', 'netflix', 'anime'
+            'sports', 'ipl', 'gaming', 'movies', 'memes', 'music', 'entertainment',
+            'reactions', 'highlights', 'viral reels', 'viral content'
         ];
 
         const WHITELIST = [
-            'tutorial', 'lecture', 'course', 'mathematics', 'physics', 'chemistry', 
-            'biology', 'coding', 'programming', 'javascript', 'react', 'nodejs', 
-            'python', 'java', 'sql', 'dsa', 'data structures', 'algorithms', 
-            'machine learning', 'ai', 'education', 'class', 'training', 'lesson', 
-            'engineering', 'web development'
+            'tutorial', 'lecture', 'coding', 'math', 'science', 'dsa', 'development',
+            'education', 'programming', 'engineering', 'university', 'training',
+            'learning', 'course', 'mathematics'
         ];
 
         const lowerText = text.toLowerCase();
@@ -179,7 +170,7 @@ class AIClassifier {
 
     // Combined Analysis (Async Job)
     async analyzeVideoAsync(task) {
-        const { videoId, videoUrl, title, description, tags, isExternal } = task;
+        const { videoId, videoUrl, title, description, tags, isExternal, contentType, platform } = task;
         
         console.log(`[AIClassifier] Starting full async analysis for video: ${title}`);
         
@@ -208,9 +199,12 @@ class AIClassifier {
             
             console.log(`
 ==================================================
+[CONTENT TYPE] ${contentType || 'Video'}
+[PLATFORM] ${platform || 'Direct Upload'}
 [OCR TEXT] N/A (Failed at metadata phase)
+[TRANSCRIPT] N/A
 [VISUAL LABELS] N/A
-[BLACKLIST MATCH] ${blacklistMatchedStr}
+[EDUCATIONAL SCORE] 0
 [FINAL DECISION] REJECTED
 ==================================================`);
             
@@ -275,9 +269,12 @@ class AIClassifier {
                 
                 console.log(`
 ==================================================
-[OCR TEXT] ${ocrTextCombined.substring(0, 500)}...
-[VISUAL LABELS] ${JSON.stringify(allVisualLabels.slice(0, 5))}...
-[BLACKLIST MATCH] ${blacklistMatchedStr}
+[CONTENT TYPE] ${contentType || 'Video'}
+[PLATFORM] ${platform || 'Direct Upload'}
+[OCR TEXT] ${(ocrTextCombined.substring(0, 500)) || 'N/A'}...
+[TRANSCRIPT] ${(transcript.substring(0, 500)) || 'N/A'}
+[VISUAL LABELS] ${allVisualLabels.length > 0 ? JSON.stringify(allVisualLabels.slice(0, 5)) : 'N/A'}...
+[EDUCATIONAL SCORE] 0
 [FINAL DECISION] REJECTED
 ==================================================`);
 
@@ -296,10 +293,13 @@ class AIClassifier {
             if (isNSFW) {
                 console.log(`
 ==================================================
-[OCR TEXT] ${ocrTextCombined.substring(0, 500)}...
-[VISUAL LABELS] ${JSON.stringify(allVisualLabels.slice(0, 10))}...
-[BLACKLIST MATCH] ${blacklistMatchedStr}
-[FINAL DECISION] REJECTED (Visual Threshold Exceeded)
+[CONTENT TYPE] ${contentType || 'Video'}
+[PLATFORM] ${platform || 'Direct Upload'}
+[OCR TEXT] ${(ocrTextCombined.substring(0, 500)) || 'N/A'}...
+[TRANSCRIPT] ${(transcript.substring(0, 500)) || 'N/A'}
+[VISUAL LABELS] ${allVisualLabels.length > 0 ? JSON.stringify(allVisualLabels.slice(0, 10)) : 'N/A'}...
+[EDUCATIONAL SCORE] 0
+[FINAL DECISION] REJECTED
 ==================================================`);
                 return { allowed: false, score: 0, visualConfidence: 0, transcriptConfidence: 0, reason: "Visual analysis detected explicit, sports, gaming, or entertainment content." };
             }
@@ -339,9 +339,12 @@ class AIClassifier {
 
             console.log(`
 ==================================================
-[OCR TEXT] ${ocrTextCombined.substring(0, 500)}...
-[VISUAL LABELS] ${JSON.stringify(allVisualLabels.slice(0, 10))}...
-[BLACKLIST MATCH] None
+[CONTENT TYPE] ${contentType || 'Video'}
+[PLATFORM] ${platform || 'Direct Upload'}
+[OCR TEXT] ${(ocrTextCombined.substring(0, 500)) || 'N/A'}...
+[TRANSCRIPT] ${(transcript.substring(0, 500)) || 'N/A'}
+[VISUAL LABELS] ${allVisualLabels.length > 0 ? JSON.stringify(allVisualLabels.slice(0, 10)) : 'N/A'}...
+[EDUCATIONAL SCORE] ${finalScore}
 [FINAL DECISION] ${finalDecision.toUpperCase()}
 ==================================================`);
 

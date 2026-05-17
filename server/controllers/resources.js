@@ -1,4 +1,7 @@
 const db = require('../db_adapter');
+const AIClassifier = require('../services/AIClassifier');
+const MetadataFetcher = require('../services/MetadataFetcher');
+const YouTubeValidator = require('../services/YouTubeValidator');
 
 const getAllResources = async (req, res) => {
     try {
@@ -11,13 +14,66 @@ const getAllResources = async (req, res) => {
 
 const createResource = async (req, res) => {
     try {
+        let { title, description, type, contentUrl, thumbnail, uploader } = req.body;
+        
+        let platform = 'Unknown Link';
+        if (contentUrl) {
+            try {
+                const parsed = new URL(contentUrl);
+                platform = parsed.hostname.replace('www.', '');
+            } catch (e) {}
+        }
+        
+        let tags = '';
+
+        if (contentUrl) {
+            if (contentUrl.includes('youtube.com') || contentUrl.includes('youtu.be')) {
+                const validation = await YouTubeValidator.validate(contentUrl);
+                if (!validation.isValid) {
+                    return res.status(400).json({ message: `Content Blocked by YouTube Validator: ${validation.reason}` });
+                }
+                if (validation.data) {
+                    title = title || validation.data.title;
+                    description = description || validation.data.description;
+                    tags = validation.data.tags.join(', ');
+                }
+            } else {
+                const metadata = await MetadataFetcher.fetch(contentUrl);
+                title = title || metadata.title;
+                description = description || metadata.description;
+                if (metadata.tags && metadata.tags.length > 0) {
+                    tags = metadata.tags.join(', ');
+                }
+            }
+        }
+
+        const aiResult = await AIClassifier.analyzeVideoAsync({
+            videoId: 'temp_res',
+            videoUrl: contentUrl,
+            title: title || '',
+            description: description || '',
+            tags,
+            isExternal: true,
+            contentType: type || 'Resource Link',
+            platform
+        });
+
+        if (!aiResult.allowed) {
+            console.log("[DB INSERT BLOCKED]");
+            return res.status(400).json({
+                success: false,
+                message: "This resource is not educational and cannot be uploaded.",
+                reason: aiResult.reason
+            });
+        }
+
         const newResource = db.resources.create({
-            title: req.body.title,
-            description: req.body.description,
-            type: req.body.type,
-            contentUrl: req.body.contentUrl,
-            thumbnail: req.body.thumbnail,
-            uploader: req.body.uploader || 'Anonymous'
+            title,
+            description,
+            type,
+            contentUrl,
+            thumbnail,
+            uploader: uploader || 'Anonymous'
         });
         res.status(201).json(newResource);
     } catch (err) {

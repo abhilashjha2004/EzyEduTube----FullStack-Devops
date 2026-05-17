@@ -335,7 +335,7 @@ const Upload = () => {
                                 disabled={loading}
                                 onChange={e => setExternalLink(e.target.value)}
                             />
-                            <p className="text-xs text-zinc-400 mt-2 text-center">YouTube, Vimeo, Coursera only.</p>
+                            <p className="text-xs text-zinc-400 mt-2 text-center">Any Educational Link (YouTube, Coursera, Instagram, docs, etc.)</p>
                         </div>
                     )}
 
