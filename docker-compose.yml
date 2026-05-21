@@ -42,7 +42,7 @@ services:
       - "5000"
 
     env_file:
-      - ./server/.env.docker
+      - ./server/.env.docker.example
 
     environment:
       - DOCKER_ENV=true
