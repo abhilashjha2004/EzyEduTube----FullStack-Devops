@@ -25,7 +25,7 @@ pipeline {
                 // Ensures the Jenkins build agent has access to the host's Docker socket.
                 // Highly valuable for live DevOps viva presentations to show tool chain integration.
                 sh 'docker --version'
-                sh 'docker compose version'
+                sh 'docker-compose version'
                 echo 'Docker capability verified successfully.'
             }
         }
@@ -35,7 +35,7 @@ pipeline {
                 echo '=== STAGE: Building Application Docker Images ==='
                 // Builds all three critical application layers (frontend, api, nginx).
                 // Uses '--no-cache' to guarantee fresh, reproducible builds, preventing stale state.
-                sh 'docker compose build --no-cache'
+                sh 'docker-compose build --no-cache'
                 echo 'All container images (frontend, api, nginx) built successfully!'
             }
         }
@@ -45,7 +45,7 @@ pipeline {
                 echo '=== STAGE: Orchestrating Containers via Docker Compose ==='
                 // Spins up the orchestrated microservice layers in detached mode (-d).
                 // Does NOT affect external production deployments (Render/Vercel) or databases.
-                sh 'docker compose up -d'
+                sh 'docker-compose up -d'
                 echo 'Containers launched successfully in detached mode.'
             }
         }
@@ -107,7 +107,7 @@ pipeline {
             echo 'Pipeline failed. Please inspect build logs above for troubleshooting.'
             // Safe automated rollback to prevent orphaned resources on host machine
             echo 'Rolling back: shutting down and cleaning up containers...'
-            sh 'docker compose down'
+            sh 'docker-compose down'
         }
     }
 }
