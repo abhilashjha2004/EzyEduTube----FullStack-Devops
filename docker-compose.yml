@@ -52,25 +52,25 @@ services:
 
     restart: always
 
-  jenkins:
-    # Official LTS image of Jenkins
-    image: jenkins/jenkins:lts
-    # container_name: ezyedutube-jenkins
-    # Run as root to have permission to access host docker socket
-    user: root
-    ports:
-      - "8080:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins_data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - ezyedutube-network
-    restart: always
+  # jenkins:
+  #   # Official LTS image of Jenkins
+  #   image: jenkins/jenkins:lts
+  #   # container_name: ezyedutube-jenkins
+  #   # Run as root to have permission to access host docker socket
+  #   user: root
+  #   ports:
+  #     - "8080:8080"
+  #     - "50000:50000"
+  #   volumes:
+  #     - jenkins_data:/var/jenkins_home
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   networks:
+  #     - ezyedutube-network
+  #   restart: always
 
 networks:
   ezyedutube-network:
     driver: bridge
 
-volumes:
-  jenkins_data:
+# volumes:
+#   jenkins_data:
