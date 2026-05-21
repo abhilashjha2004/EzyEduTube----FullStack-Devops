@@ -5,8 +5,8 @@ services:
       context: ./nginx
       dockerfile: Dockerfile
 
-    ports:
-      - "80:80"
+    expose:
+      - "80"
 
     depends_on:
       - frontend
