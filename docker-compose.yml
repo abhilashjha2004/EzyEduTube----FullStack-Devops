@@ -55,7 +55,7 @@ services:
   jenkins:
     # Official LTS image of Jenkins
     image: jenkins/jenkins:lts
-    container_name: ezyedutube-jenkins
+    # container_name: ezyedutube-jenkins
     # Run as root to have permission to access host docker socket
     user: root
     ports:
