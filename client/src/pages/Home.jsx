@@ -143,7 +143,7 @@ const Home = () => {
                     <div className="relative z-10 max-w-2xl">
                         <div className="flex items-center gap-2 mb-3">
                             <Sparkles size={18} className="text-yellow-300" />
-                            <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wider">Welcome to EzyEduTube 🚀</span>
+                            <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wider">DevOps CI/CD Pipeline Active 🚀</span>
                         </div>
                         <h1 className="text-3xl md:text-4xl font-extrabold mb-3 leading-tight">
                             Learn Anything,<br />Anytime, Anywhere
