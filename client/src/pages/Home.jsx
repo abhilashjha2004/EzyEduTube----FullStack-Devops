@@ -146,7 +146,7 @@ const Home = () => {
                             <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wider">DevOps CI/CD Pipeline Active 🚀</span>
                         </div>
                         <h1 className="text-3xl md:text-4xl font-extrabold mb-3 leading-tight">
-                            Learn Anything,<br />Anytime, Anywhere
+                            Learn Anything,<br />Anytime, Anywhere Abhilash Jha
                         </h1>
                         <p className="text-white/80 text-sm mb-6 max-w-md">
                             Discover thousands of educational videos from expert creators. Your knowledge journey starts here.
