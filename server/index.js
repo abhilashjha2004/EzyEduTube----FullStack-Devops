@@ -10,8 +10,10 @@ const passport = require('passport');
 const { sequelize } = require('./models');
 require('./config/passport');
 
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
