@@ -1,0 +1,28 @@
+[
+  {
+    "sourcePublicId": "ezyedutube/videos/bb3dcpnsb4nzoilwu5ih",
+    "videoUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779039090/ezyedutube/videos/bb3dcpnsb4nzoilwu5ih.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1778753461/ezyedutube/thumbnails/btv30jr6uenla1pu1gcq.png",
+    "title": "DSA & Backend Interview Preparation: FAANG Roadmap & LeetCode Strategy",
+    "description": "Comprehensive guide on preparing for FAANG interviews, choosing between algorithmic and backend engineering roles, solving LeetCode problems, and whiteboard interview techniques.",
+    "subject": "Computer Science",
+    "duration": 78,
+    "sourceType": "upload",
+    "recoveryStatus": "approved",
+    "isEducational": true,
+    "reviewedByAI": true
+  },
+  {
+    "sourcePublicId": "ezyedutube/videos/obwzhw25ngdhgr53fujh",
+    "videoUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779024073/ezyedutube/videos/obwzhw25ngdhgr53fujh.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779024073/ezyedutube/videos/obwzhw25ngdhgr53fujh.jpg",
+    "title": "EzyEduTube Platform Overview: MERN Stack Architecture & Engineering",
+    "description": "Technical demonstration of the EzyEduTube platform architecture, detailing the MERN-based educational system, clean learning environment, and automated content moderation pipeline.",
+    "subject": "Computer Science",
+    "duration": 74,
+    "sourceType": "upload",
+    "recoveryStatus": "approved",
+    "isEducational": true,
+    "reviewedByAI": true
+  }
+]

@@ -1,24 +1,42 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const Progress = sequelize.define('Progress', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
+const progressSchema = new mongoose.Schema({
+    studentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    videoId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Video',
+        required: true
     },
     watchedSeconds: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
+        type: Number,
+        default: 0
     },
     completed: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
+        type: Boolean,
+        default: false
     }
 }, {
-    tableName: 'progresses',
-    freezeTableName: true,
-    timestamps: true
+    timestamps: true,
+    toJSON: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    },
+    toObject: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    }
 });
 
-module.exports = Progress;
+progressSchema.index({ studentId: 1, videoId: 1 }, { unique: true });
+
+module.exports = mongoose.model('Progress', progressSchema);

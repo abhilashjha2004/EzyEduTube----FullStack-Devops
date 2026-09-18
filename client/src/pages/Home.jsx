@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import VideoCard from '../components/VideoCard';
-import { Loader2, TrendingUp, Clock, Star, Sparkles, BookOpen, Search, X } from 'lucide-react';
+import { Loader2, TrendingUp, Clock, Star, Sparkles, BookOpen, Search, X, GraduationCap } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -69,6 +69,7 @@ function videoMatchesStream(video, stream) {
 const Home = () => {
     const { user } = useAuth();
     const [videos, setVideos] = useState([]);
+    const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeStream, setActiveStream] = useState('All');
     const [activeSort, setActiveSort] = useState('latest');
@@ -76,16 +77,52 @@ const Home = () => {
     const searchQuery = searchParams.get('search') || '';
 
     useEffect(() => {
-        console.log(`[Home.jsx] Fetching videos from: ${import.meta.env.VITE_API_URL}/api/videos`);
-        axios.get(`${import.meta.env.VITE_API_URL}/api/videos`)
-            .then(res => {
-                console.log(`[Home.jsx] Successfully fetched ${res.data?.length || 0} videos from backend.`);
-                setVideos(Array.isArray(res.data) ? res.data : []);
-            })
-            .catch(err => {
-                console.error('[Home.jsx] Failed to fetch videos:', err.response?.data || err.message);
-            })
-            .finally(() => setLoading(false));
+        let isMounted = true;
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        console.log(`[Home.jsx] Fetching videos and courses from: ${apiBase}`);
+
+        const loadContent = async () => {
+            try {
+                const [videosRes, coursesRes] = await Promise.allSettled([
+                    axios.get(`${apiBase}/api/videos`, { timeout: 8000 }),
+                    axios.get(`${apiBase}/api/courses`, { timeout: 8000 })
+                ]);
+
+                if (!isMounted) return;
+
+                if (videosRes.status === 'fulfilled') {
+                    const data = videosRes.value.data;
+                    const videoList = Array.isArray(data) ? data : (data?.videos || []);
+                    console.log(`[Home.jsx] Successfully fetched ${videoList.length} videos from backend.`);
+                    setVideos(videoList);
+                } else {
+                    console.error('[Home.jsx] Failed to fetch videos:', videosRes.reason?.message || videosRes.reason);
+                    setVideos([]);
+                }
+
+                if (coursesRes.status === 'fulfilled') {
+                    const data = coursesRes.value.data;
+                    const courseList = Array.isArray(data) ? data : (data?.courses || []);
+                    console.log(`[Home.jsx] Successfully fetched ${courseList.length} courses from backend.`);
+                    setCourses(courseList);
+                } else {
+                    console.error('[Home.jsx] Failed to fetch courses:', coursesRes.reason?.message || coursesRes.reason);
+                    setCourses([]);
+                }
+            } catch (err) {
+                console.error('[Home.jsx] Unexpected fetch error:', err);
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadContent();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // ── Filtered + sorted list ─────────────────────────────────────────────
@@ -258,6 +295,50 @@ const Home = () => {
                     {searchQuery ? ` · "${searchQuery}"` : ''}
                 </span>
             </div>
+
+            {/* ── Featured Courses ────────────────────────────────────── */}
+            {courses.length > 0 && !searchQuery && activeStream === 'All' && (
+                <div className="space-y-4 pt-2">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                            <GraduationCap size={15} className="text-orange-500" />
+                            Featured Courses
+                        </h2>
+                        <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                            {courses.length} Course{courses.length !== 1 ? 's' : ''} Available
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {courses.map(course => (
+                            <div
+                                key={course._id || course.id}
+                                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 hover:border-orange-400/50 hover:shadow-lg transition-all flex flex-col justify-between group cursor-pointer"
+                            >
+                                <div className="space-y-2.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                                            {course.subject || 'Course'}
+                                        </span>
+                                        {course.teacher?.username && (
+                                            <span className="text-xs text-zinc-400 flex items-center gap-1 font-medium">
+                                                👨‍🏫 {course.teacher.username}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-orange-500 transition-colors line-clamp-1">
+                                        {course.title}
+                                    </h3>
+                                    {course.description && (
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+                                            {course.description}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* ── Video Grid ──────────────────────────────────────────── */}
             <div id="video-grid">

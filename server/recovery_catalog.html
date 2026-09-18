@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EzyEduTube — Cloudinary Recovery Catalog (17 Videos & 18 Thumbnails)</title>
+    <style>
+        :root {
+            --bg-primary: #09090b;
+            --bg-secondary: #121215;
+            --bg-card: #18181b;
+            --bg-card-hover: #202024;
+            --border: #27272a;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent: #f97316;
+            --accent-gradient: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+            --badge-bg: rgba(249, 115, 22, 0.12);
+            --badge-border: rgba(249, 115, 22, 0.3);
+            --unknown-badge-bg: rgba(239, 68, 68, 0.15);
+            --unknown-badge-border: rgba(239, 68, 68, 0.35);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            padding: 2rem 1.5rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .brand-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 0.25rem;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-badge {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 9999px;
+            padding: 0.5rem 1.25rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-badge.highlight {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--accent-gradient);
+            color: white;
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: var(--text-main);
+            background: var(--bg-card);
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+            gap: 1.75rem;
+        }
+
+        .video-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-col: column;
+            flex-direction: column;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .video-card:hover {
+            border-color: rgba(249, 115, 22, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .video-header {
+            padding: 1rem 1.25rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .video-num {
+            font-weight: 800;
+            font-size: 1rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .duration-pill {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid var(--border);
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .player-container {
+            width: 100%;
+            background: #000;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            outline: none;
+        }
+
+        .video-body {
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            flex-grow: 1;
+        }
+
+        .meta-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            font-size: 0.82rem;
+        }
+
+        .meta-label {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+        }
+
+        .meta-val {
+            word-break: break-all;
+            color: var(--text-main);
+            font-family: monospace;
+            background: var(--bg-secondary);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .copy-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-family: sans-serif;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .unknown-field-box {
+            background: var(--unknown-badge-bg);
+            border: 1px dashed var(--unknown-badge-border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .field-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .field-name {
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .field-tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.2);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            margin-top: 0.5rem;
+        }
+
+        .input-group label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        .input-group input, .input-group select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: var(--accent);
+        }
+
+        .meta-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+            font-size: 0.8rem;
+        }
+
+        .thumb-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .thumb-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .thumb-preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .thumb-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .thumb-preview:hover img {
+            transform: scale(1.05);
+        }
+
+        .thumb-info {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .action-bar {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .btn-export {
+            background: var(--accent-gradient);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.75rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-export:hover {
+            opacity: 0.9;
+        }
+
+        .alert-box {
+            background: rgba(249, 115, 22, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <div class="brand-title">🎓 EzyEduTube — Cloudinary Recovery Catalog</div>
+                <div class="subtitle">Review and identify 17 recovered Cloudinary educational videos and 18 thumbnails</div>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-badge highlight">📹 17 Videos Available</div>
+                <div class="stat-badge">🖼️ 18 Thumbnails Available</div>
+                <div class="stat-badge">☁️ Cloud: dseo7ljtx</div>
+            </div>
+        </header>
+
+        <div class="alert-box">
+            <strong>🔒 Safe Review Mode:</strong> All 17 videos below are playable directly from Cloudinary CDN. Inspect each video to identify its real topic and educational title. Fill in the title and subject fields below, then click <strong>"Export Mapped JSON"</strong> to generate the updated seed file for MongoDB.
+        </div>
+
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('videos')">📹 Video Catalog (17)</button>
+            <button class="tab-btn" onclick="switchTab('thumbnails')">🖼️ Thumbnails Gallery (18)</button>
+            <button class="tab-btn" onclick="switchTab('json')">📄 Raw Recovery JSON</button>
+        </div>
+
+        <!-- VIDEOS TAB -->
+        <div id="tab-videos" class="tab-pane active">
+            <div class="video-grid" id="videoGridContainer">
+                <!-- Injected via JavaScript -->
+            </div>
+        </div>
+
+        <!-- THUMBNAILS TAB -->
+        <div id="tab-thumbnails" class="tab-pane">
+            <div class="thumb-grid" id="thumbnailGridContainer">
+                <!-- Injected via JavaScript -->
+            </div>
+        </div>
+
+        <!-- JSON TAB -->
+        <div id="tab-json" class="tab-pane">
+            <div class="action-bar">
+                <div>
+                    <h3>Raw Catalog JSON with recoveryStatus: "needs_identification"</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem;">Ready to be enriched with discovered titles/subjects</p>
+                </div>
+                <button class="btn-export" onclick="copyCatalogJSON()">📋 Copy JSON to Clipboard</button>
+            </div>
+            <pre id="jsonViewer" style="background: var(--bg-card); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px; margin-top: 1rem; overflow: auto; max-height: 600px; font-family: monospace; font-size: 0.85rem; color: #a7f3d0;"></pre>
+        </div>
+
+        <div class="action-bar">
+            <div>
+                <h3>Export Identification Work</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">Captured titles and subjects from inputs above will be bundled into a download ready for MongoDB seeding.</p>
+            </div>
+            <button class="btn-export" onclick="exportIdentifiedJSON()">💾 Download Identified Catalog (.json)</button>
+        </div>
+    </div>
+
+    <script>
+        // Load data from recovery_catalog.json
+        const catalogData = [
+  {
+    "videoIndex": 1,
+    "public_id": "ezyedutube/videos/anwiusr4usbwasitxjn8",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778968938/ezyedutube/videos/anwiusr4usbwasitxjn8.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778968938/ezyedutube/videos/anwiusr4usbwasitxjn8.jpg",
+    "duration": 392,
+    "durationFormatted": "6:32",
+    "format": "mp4",
+    "resolution": "636x360",
+    "fileSizeBytes": 28019027,
+    "uploadedAt": "2026-05-16T22:02:18Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 2,
+    "public_id": "ezyedutube/videos/bb3dcpnsb4nzoilwu5ih",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779039090/ezyedutube/videos/bb3dcpnsb4nzoilwu5ih.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779039090/ezyedutube/videos/bb3dcpnsb4nzoilwu5ih.jpg",
+    "duration": 78,
+    "durationFormatted": "1:18",
+    "format": "mp4",
+    "resolution": "1920x1080",
+    "fileSizeBytes": 5600719,
+    "uploadedAt": "2026-05-17T17:31:30Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 3,
+    "public_id": "ezyedutube/videos/d6sh4id5y90uhuewkuir",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779038112/ezyedutube/videos/d6sh4id5y90uhuewkuir.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779038112/ezyedutube/videos/d6sh4id5y90uhuewkuir.jpg",
+    "duration": 78,
+    "durationFormatted": "1:18",
+    "format": "mp4",
+    "resolution": "1920x1080",
+    "fileSizeBytes": 5600719,
+    "uploadedAt": "2026-05-17T17:15:12Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 4,
+    "public_id": "ezyedutube/videos/eo5jkwcpkuzyazbhwxka",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778967844/ezyedutube/videos/eo5jkwcpkuzyazbhwxka.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778967844/ezyedutube/videos/eo5jkwcpkuzyazbhwxka.jpg",
+    "duration": 392,
+    "durationFormatted": "6:32",
+    "format": "mp4",
+    "resolution": "636x360",
+    "fileSizeBytes": 28019027,
+    "uploadedAt": "2026-05-16T21:44:04Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 5,
+    "public_id": "ezyedutube/videos/f5xmyahpcnibounp2nap",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779037852/ezyedutube/videos/f5xmyahpcnibounp2nap.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779037852/ezyedutube/videos/f5xmyahpcnibounp2nap.jpg",
+    "duration": 78,
+    "durationFormatted": "1:18",
+    "format": "mp4",
+    "resolution": "1920x1080",
+    "fileSizeBytes": 5600719,
+    "uploadedAt": "2026-05-17T17:10:52Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 6,
+    "public_id": "ezyedutube/videos/hhnn1wc62smvs2ezipbv",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778970519/ezyedutube/videos/hhnn1wc62smvs2ezipbv.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778970519/ezyedutube/videos/hhnn1wc62smvs2ezipbv.jpg",
+    "duration": 392,
+    "durationFormatted": "6:32",
+    "format": "mp4",
+    "resolution": "636x360",
+    "fileSizeBytes": 28019027,
+    "uploadedAt": "2026-05-16T22:28:39Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 7,
+    "public_id": "ezyedutube/videos/mjvwjglcif8fk7ywsywn",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778969971/ezyedutube/videos/mjvwjglcif8fk7ywsywn.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778969971/ezyedutube/videos/mjvwjglcif8fk7ywsywn.jpg",
+    "duration": 392,
+    "durationFormatted": "6:32",
+    "format": "mp4",
+    "resolution": "636x360",
+    "fileSizeBytes": 28019027,
+    "uploadedAt": "2026-05-16T22:19:31Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 8,
+    "public_id": "ezyedutube/videos/mxygrrd2sc5ddctywekz",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779037337/ezyedutube/videos/mxygrrd2sc5ddctywekz.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779037337/ezyedutube/videos/mxygrrd2sc5ddctywekz.jpg",
+    "duration": 392,
+    "durationFormatted": "6:32",
+    "format": "mp4",
+    "resolution": "636x360",
+    "fileSizeBytes": 28019027,
+    "uploadedAt": "2026-05-17T17:02:17Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 9,
+    "public_id": "ezyedutube/videos/obwzhw25ngdhgr53fujh",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779024073/ezyedutube/videos/obwzhw25ngdhgr53fujh.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779024073/ezyedutube/videos/obwzhw25ngdhgr53fujh.jpg",
+    "duration": 74,
+    "durationFormatted": "1:14",
+    "format": "mp4",
+    "resolution": "1908x1080",
+    "fileSizeBytes": 64128448,
+    "uploadedAt": "2026-05-17T13:21:13Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 10,
+    "public_id": "ezyedutube/videos/sq2hj1wwxtk5209fslgx",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779037789/ezyedutube/videos/sq2hj1wwxtk5209fslgx.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779037789/ezyedutube/videos/sq2hj1wwxtk5209fslgx.jpg",
+    "duration": 78,
+    "durationFormatted": "1:18",
+    "format": "mp4",
+    "resolution": "1920x1080",
+    "fileSizeBytes": 5600719,
+    "uploadedAt": "2026-05-17T17:09:49Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 11,
+    "public_id": "ezyedutube/videos/waqrgilt0fdigxotvysc",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778971103/ezyedutube/videos/waqrgilt0fdigxotvysc.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778971103/ezyedutube/videos/waqrgilt0fdigxotvysc.jpg",
+    "duration": 392,
+    "durationFormatted": "6:32",
+    "format": "mp4",
+    "resolution": "636x360",
+    "fileSizeBytes": 28019027,
+    "uploadedAt": "2026-05-16T22:38:23Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 12,
+    "public_id": "ezyedutube/videos/wh2glqkunq9tl0xhl4gx",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779039289/ezyedutube/videos/wh2glqkunq9tl0xhl4gx.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779039289/ezyedutube/videos/wh2glqkunq9tl0xhl4gx.jpg",
+    "duration": 74,
+    "durationFormatted": "1:14",
+    "format": "mp4",
+    "resolution": "1908x1080",
+    "fileSizeBytes": 64128448,
+    "uploadedAt": "2026-05-17T17:34:49Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 13,
+    "public_id": "ezyedutube/videos/xbdcxbjxjhspirarazls",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778967251/ezyedutube/videos/xbdcxbjxjhspirarazls.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778967251/ezyedutube/videos/xbdcxbjxjhspirarazls.jpg",
+    "duration": 74,
+    "durationFormatted": "1:14",
+    "format": "mp4",
+    "resolution": "1908x1080",
+    "fileSizeBytes": 64128448,
+    "uploadedAt": "2026-05-16T21:34:11Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 14,
+    "public_id": "ezyedutube/videos/y2d38fgosdtdplxsec4n",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778967119/ezyedutube/videos/y2d38fgosdtdplxsec4n.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778967119/ezyedutube/videos/y2d38fgosdtdplxsec4n.jpg",
+    "duration": 78,
+    "durationFormatted": "1:18",
+    "format": "mp4",
+    "resolution": "1920x1080",
+    "fileSizeBytes": 5600719,
+    "uploadedAt": "2026-05-16T21:31:59Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 15,
+    "public_id": "ezyedutube/videos/ydignovzlihri7givrzk",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779037297/ezyedutube/videos/ydignovzlihri7givrzk.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779037297/ezyedutube/videos/ydignovzlihri7givrzk.jpg",
+    "duration": 392,
+    "durationFormatted": "6:32",
+    "format": "mp4",
+    "resolution": "636x360",
+    "fileSizeBytes": 28019027,
+    "uploadedAt": "2026-05-17T17:01:37Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 16,
+    "public_id": "ezyedutube/videos/yuqyepjqbjrwm4v5srky",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778789737/ezyedutube/videos/yuqyepjqbjrwm4v5srky.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1778789737/ezyedutube/videos/yuqyepjqbjrwm4v5srky.jpg",
+    "duration": 43,
+    "durationFormatted": "0:43",
+    "format": "mp4",
+    "resolution": "1080x1920",
+    "fileSizeBytes": 19753854,
+    "uploadedAt": "2026-05-14T20:15:37Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "suggestedThumbnail": "ezyedutube/thumbnails/u6obwylfbfb9chwed9xs",
+    "recoveryStatus": "needs_identification"
+  },
+  {
+    "videoIndex": 17,
+    "public_id": "ezyedutube/videos/zn4o9dynhqtlykeu45gu",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779037686/ezyedutube/videos/zn4o9dynhqtlykeu45gu.mp4",
+    "thumbnailUrl": "https://res.cloudinary.com/dseo7ljtx/video/upload/v1779037686/ezyedutube/videos/zn4o9dynhqtlykeu45gu.jpg",
+    "duration": 78,
+    "durationFormatted": "1:18",
+    "format": "mp4",
+    "resolution": "1920x1080",
+    "fileSizeBytes": 5600719,
+    "uploadedAt": "2026-05-17T17:08:06Z",
+    "title": "[NOT YET KNOWN]",
+    "subject": "[NOT YET KNOWN]",
+    "course": "[NOT YET KNOWN]",
+    "description": "[NOT YET KNOWN]",
+    "recoveryStatus": "needs_identification"
+  }
+];
+
+        const thumbnailData = [
+  {
+    "index": 1,
+    "public_id": "ezyedutube/thumbnails/abalctwmdxvsilqeujpa",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779824745/ezyedutube/thumbnails/abalctwmdxvsilqeujpa.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7962901,
+    "uploadedAt": "2026-05-26T19:45:45Z"
+  },
+  {
+    "index": 2,
+    "public_id": "ezyedutube/thumbnails/btv30jr6uenla1pu1gcq",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1778753461/ezyedutube/thumbnails/btv30jr6uenla1pu1gcq.png",
+    "format": "png",
+    "resolution": "2672x1600",
+    "fileSizeBytes": 7040956,
+    "uploadedAt": "2026-05-14T10:11:01Z"
+  },
+  {
+    "index": 3,
+    "public_id": "ezyedutube/thumbnails/dkjfvag73lws6gewm823",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1778751605/ezyedutube/thumbnails/dkjfvag73lws6gewm823.png",
+    "format": "png",
+    "resolution": "2672x1600",
+    "fileSizeBytes": 6156862,
+    "uploadedAt": "2026-05-14T09:40:05Z"
+  },
+  {
+    "index": 4,
+    "public_id": "ezyedutube/thumbnails/dqp1rx1opivrciupwsvn",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779028748/ezyedutube/thumbnails/dqp1rx1opivrciupwsvn.png",
+    "format": "png",
+    "resolution": "2672x1600",
+    "fileSizeBytes": 6156862,
+    "uploadedAt": "2026-05-17T14:39:08Z"
+  },
+  {
+    "index": 5,
+    "public_id": "ezyedutube/thumbnails/fgrfgpbomx0gdml4ngpu",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779824893/ezyedutube/thumbnails/fgrfgpbomx0gdml4ngpu.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7962901,
+    "uploadedAt": "2026-05-26T19:48:13Z"
+  },
+  {
+    "index": 6,
+    "public_id": "ezyedutube/thumbnails/fyc9nrcdfnhthw5nx8hg",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779822995/ezyedutube/thumbnails/fyc9nrcdfnhthw5nx8hg.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7658995,
+    "uploadedAt": "2026-05-26T19:16:35Z"
+  },
+  {
+    "index": 7,
+    "public_id": "ezyedutube/thumbnails/h75izmxl1wovxcufcf1y",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779701790/ezyedutube/thumbnails/h75izmxl1wovxcufcf1y.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7317386,
+    "uploadedAt": "2026-05-25T09:36:30Z"
+  },
+  {
+    "index": 8,
+    "public_id": "ezyedutube/thumbnails/ic1iw1jmpwiufpn71yyf",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779822866/ezyedutube/thumbnails/ic1iw1jmpwiufpn71yyf.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7658995,
+    "uploadedAt": "2026-05-26T19:14:26Z"
+  },
+  {
+    "index": 9,
+    "public_id": "ezyedutube/thumbnails/ivti7kleas1a4k25ardm",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779824784/ezyedutube/thumbnails/ivti7kleas1a4k25ardm.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7962901,
+    "uploadedAt": "2026-05-26T19:46:24Z"
+  },
+  {
+    "index": 10,
+    "public_id": "ezyedutube/thumbnails/lsiai9qjs8fs6wrg15ay",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779822798/ezyedutube/thumbnails/lsiai9qjs8fs6wrg15ay.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7658995,
+    "uploadedAt": "2026-05-26T19:13:18Z"
+  },
+  {
+    "index": 11,
+    "public_id": "ezyedutube/thumbnails/qsmmmlz1bfwgyjsfznx6",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779822900/ezyedutube/thumbnails/qsmmmlz1bfwgyjsfznx6.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7658995,
+    "uploadedAt": "2026-05-26T19:15:00Z"
+  },
+  {
+    "index": 12,
+    "public_id": "ezyedutube/thumbnails/u6obwylfbfb9chwed9xs",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1778789336/ezyedutube/thumbnails/u6obwylfbfb9chwed9xs.png",
+    "format": "png",
+    "resolution": "2672x1600",
+    "fileSizeBytes": 7040956,
+    "uploadedAt": "2026-05-14T20:08:56Z"
+  },
+  {
+    "index": 13,
+    "public_id": "ezyedutube/thumbnails/vokjgbdsnemaplrodtk6",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779824707/ezyedutube/thumbnails/vokjgbdsnemaplrodtk6.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7962901,
+    "uploadedAt": "2026-05-26T19:45:07Z"
+  },
+  {
+    "index": 14,
+    "public_id": "ezyedutube/thumbnails/vpxaaufi0z5q9htvqke5",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779824643/ezyedutube/thumbnails/vpxaaufi0z5q9htvqke5.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7962901,
+    "uploadedAt": "2026-05-26T19:44:03Z"
+  },
+  {
+    "index": 15,
+    "public_id": "ezyedutube/thumbnails/xd0l2edgjkrcii9cthbj",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779820627/ezyedutube/thumbnails/xd0l2edgjkrcii9cthbj.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7080950,
+    "uploadedAt": "2026-05-26T18:37:07Z"
+  },
+  {
+    "index": 16,
+    "public_id": "ezyedutube/thumbnails/y5pszluv2jrfbeaizc92",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779821827/ezyedutube/thumbnails/y5pszluv2jrfbeaizc92.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7715634,
+    "uploadedAt": "2026-05-26T18:57:07Z"
+  },
+  {
+    "index": 17,
+    "public_id": "ezyedutube/thumbnails/ycs5ifhkzq2uc7s0uzyz",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1779824327/ezyedutube/thumbnails/ycs5ifhkzq2uc7s0uzyz.png",
+    "format": "png",
+    "resolution": "2752x1536",
+    "fileSizeBytes": 7148405,
+    "uploadedAt": "2026-05-26T19:38:47Z"
+  },
+  {
+    "index": 18,
+    "public_id": "ezyedutube/thumbnails/yedk9z4phqbtijbbsbln",
+    "secure_url": "https://res.cloudinary.com/dseo7ljtx/image/upload/v1778151590/ezyedutube/thumbnails/yedk9z4phqbtijbbsbln.png",
+    "format": "png",
+    "resolution": "2672x1600",
+    "fileSizeBytes": 6156862,
+    "uploadedAt": "2026-05-07T10:59:50Z"
+  }
+];
+
+        function renderVideos() {
+            const container = document.getElementById('videoGridContainer');
+            container.innerHTML = catalogData.map(v => `
+                <div class="video-card" id="card-${v.videoIndex}">
+                    <div class="video-header">
+                        <div class="video-num">
+                            <span>🎬 VIDEO #${v.videoIndex}</span>
+                        </div>
+                        <span class="duration-pill">⏱️ ${v.durationFormatted}</span>
+                    </div>
+                    <div class="player-container">
+                        <video controls preload="metadata" playsinline poster="${v.thumbnailUrl}">
+                            <source src="${v.secure_url}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                    <div class="video-body">
+                        <div class="meta-row">
+                            <span class="meta-label">Public ID</span>
+                            <div class="meta-val">
+                                <span>${v.public_id}</span>
+                                <button class="copy-btn" onclick="copyText('${v.public_id}')">Copy</button>
+                            </div>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-label">Secure Cloudinary URL</span>
+                            <div class="meta-val">
+                                <span style="font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${v.secure_url}</span>
+                                <button class="copy-btn" onclick="copyText('${v.secure_url}')">Copy</button>
+                            </div>
+                        </div>
+                        <div class="meta-grid-2">
+                            <div>
+                                <span class="meta-label">Resolution</span>
+                                <div style="font-weight: 600; margin-top: 2px;">${v.resolution}</div>
+                            </div>
+                            <div>
+                                <span class="meta-label">Uploaded</span>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">${new Date(v.uploadedAt).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="unknown-field-box">
+                            <div class="field-item">
+                                <span class="field-name">Title:</span>
+                                <span class="field-tag" id="tag-title-${v.videoIndex}">[NOT YET KNOWN]</span>
+                            </div>
+                            <div class="field-item">
+                                <span class="field-name">Subject:</span>
+                                <span class="field-tag" id="tag-subject-${v.videoIndex}">[NOT YET KNOWN]</span>
+                            </div>
+                            <div class="field-item">
+                                <span class="field-name">Course:</span>
+                                <span class="field-tag" id="tag-course-${v.videoIndex}">[NOT YET KNOWN]</span>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Identify Title:</label>
+                            <input type="text" id="input-title-${v.videoIndex}" placeholder="Enter video topic/title..." onchange="updateVideo(${v.videoIndex})">
+                        </div>
+
+                        <div class="input-group">
+                            <label>Subject Stream:</label>
+                            <select id="input-subject-${v.videoIndex}" onchange="updateVideo(${v.videoIndex})">
+                                <option value="">-- Select Subject --</option>
+                                <option value="Computer Science">Computer Science / Programming</option>
+                                <option value="Mathematics">Mathematics</option>
+                                <option value="Science">Science / Physics / Chemistry</option>
+                                <option value="Technology">Technology / Engineering</option>
+                                <option value="Business">Business / Commerce</option>
+                                <option value="General">General Education</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderThumbnails() {
+            const container = document.getElementById('thumbnailGridContainer');
+            container.innerHTML = thumbnailData.map(t => `
+                <div class="thumb-card">
+                    <div class="thumb-preview">
+                        <img src="${t.secure_url}" alt="${t.public_id}" loading="lazy">
+                    </div>
+                    <div class="thumb-info">
+                        <span style="font-weight: 700; color: var(--accent);">Thumb #${t.index}</span>
+                        <div style="font-size: 0.75rem; font-family: monospace; word-break: break-all;">${t.public_id}</div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted);">
+                            <span>${t.resolution}</span>
+                            <span>${(t.fileSizeBytes / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">${new Date(t.uploadedAt).toLocaleString()}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateVideo(index) {
+            const video = catalogData.find(v => v.videoIndex === index);
+            const titleVal = document.getElementById(`input-title-${index}`).value.trim();
+            const subjectVal = document.getElementById(`input-subject-${index}`).value;
+
+            if (titleVal) {
+                video.title = titleVal;
+                const tag = document.getElementById(`tag-title-${index}`);
+                tag.textContent = titleVal;
+                tag.style.color = '#10b981';
+                tag.style.background = 'rgba(16, 185, 129, 0.2)';
+            }
+            if (subjectVal) {
+                video.subject = subjectVal;
+                const tag = document.getElementById(`tag-subject-${index}`);
+                tag.textContent = subjectVal;
+                tag.style.color = '#10b981';
+                tag.style.background = 'rgba(16, 185, 129, 0.2)';
+            }
+
+            if (titleVal && subjectVal) {
+                video.recoveryStatus = 'identified';
+            }
+
+            renderJSON();
+        }
+
+        function renderJSON() {
+            document.getElementById('jsonViewer').textContent = JSON.stringify(catalogData, null, 2);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+            if (tabId === 'videos') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('tab-videos').classList.add('active');
+            } else if (tabId === 'thumbnails') {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('tab-thumbnails').classList.add('active');
+            } else if (tabId === 'json') {
+                document.querySelectorAll('.tab-btn')[2].classList.add('active');
+                document.getElementById('tab-json').classList.add('active');
+                renderJSON();
+            }
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard: ' + text);
+            });
+        }
+
+        function copyCatalogJSON() {
+            navigator.clipboard.writeText(JSON.stringify(catalogData, null, 2)).then(() => {
+                alert('Recovery Catalog JSON copied to clipboard!');
+            });
+        }
+
+        function exportIdentifiedJSON() {
+            const blob = new Blob([JSON.stringify(catalogData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ezyedutube_identified_catalog.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize on load
+        renderVideos();
+        renderThumbnails();
+        renderJSON();
+    </script>
+</body>
+</html>

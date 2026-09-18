@@ -1,43 +1,63 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const User = sequelize.define('User', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
+const userSchema = new mongoose.Schema({
     username: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
     },
     email: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        unique: true
+        type: String,
+        trim: true,
+        lowercase: true
     },
     password: {
-        type: DataTypes.STRING,
-        allowNull: true
+        type: String,
+        default: null
     },
     role: {
-        type: DataTypes.ENUM('user', 'admin', 'teacher'),
-        defaultValue: 'user'
+        type: String,
+        enum: ['user', 'admin', 'teacher'],
+        default: 'user'
     },
     googleId: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        unique: true
+        type: String
     },
     avatar: {
-        type: DataTypes.STRING,
-        defaultValue: ''
-    }
+        type: String,
+        default: ''
+    },
+    subscribers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, {
-    tableName: 'users',
-    freezeTableName: true,
-    timestamps: true
+    timestamps: true,
+    toJSON: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    },
+    toObject: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    }
 });
 
-module.exports = User;
+// Use partialFilterExpression so only documents with non-null string googleId/email are indexed for uniqueness
+userSchema.index(
+    { email: 1 },
+    { unique: true, partialFilterExpression: { email: { $type: 'string' } } }
+);
+userSchema.index(
+    { googleId: 1 },
+    { unique: true, partialFilterExpression: { googleId: { $type: 'string' } } }
+);
+
+module.exports = mongoose.model('User', userSchema);

@@ -1,13 +1,16 @@
-const { Op } = require('sequelize');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const jwt = require('jsonwebtoken');
 const { Video, Comment, User, Course, Document, VideoView } = require('../models');
 const { uploadToCloudinary, cloudinary } = require('../config/cloudinary');
 const AIClassifier = require('../services/AIClassifier');
 const MetadataFetcher = require('../services/MetadataFetcher');
+const YouTubeValidator = require('../services/YouTubeValidator');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_eduhub_2026';
 
 // ─── Cloudinary availability check ────────────────────────────────────────────
 const cloudinaryConfigured = () =>
@@ -21,81 +24,46 @@ const saveFile = async (buffer, originalName, subfolder, resourceType = 'auto') 
     if (cloudinaryConfigured()) {
         return await uploadToCloudinary(buffer, subfolder, resourceType);
     }
-    // Local fallback — save to server/uploads/<subfolder>/
     const uploadDir = path.join(__dirname, '..', 'uploads', subfolder);
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
     const safeName = `${Date.now()}-${originalName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const filePath = path.join(uploadDir, safeName);
     fs.writeFileSync(filePath, buffer);
-    // Return a URL relative to the server
     return `/uploads/${subfolder}/${safeName}`;
 };
 
-// ─── Validation Helpers ───────────────────────────────────────────────────────
-
-const ALLOWED_DOMAINS = [
-    'youtube.com', 'youtu.be', 'vimeo.com', 'coursera.org',
-    'udemy.com', 'edx.org', 'khanacademy.org', 'wikipedia.org'
-];
-
-const isEducationalLink = (url) => {
-    try {
-        const domain = new URL(url).hostname.replace('www.', '');
-        return ALLOWED_DOMAINS.some(d => domain.includes(d));
-    } catch { return false; }
-};
-
-const checkYouTubeCategory = async (url) => {
-    try {
-        const { data } = await axios.get(url, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36' },
-            timeout: 5000 // Prevent hanging requests from causing 504 Gateway Timeout
-        });
-        const $ = cheerio.load(data);
-        const genre = $('meta[itemprop="genre"]').attr('content');
-        const categoryMatch = data.match(/"category":"(.*?)"/);
-        const foundCategory = genre || (categoryMatch && categoryMatch[1]) || 'Unknown';
-
-        const title = $('title').text() || $('meta[name="title"]').attr('content') || '';
-        const description = $('meta[name="description"]').attr('content') || '';
-
-        const EDU_CATEGORIES = ['Education', 'Science & Technology', 'Howto & Style', 'News & Politics', 'Nonprofits & Activism'];
-        let isEdu = EDU_CATEGORIES.includes(foundCategory);
-        if (foundCategory === 'Unknown') isEdu = true; // Let AIClassifier decide if category is missing
-
-        return {
-            isEdu,
-            fetchedTitle: title,
-            fetchedDesc: description
-        };
-    } catch (error) {
-        console.error('YouTube Fetch Warning (non-fatal):', error.message);
-        // If YouTube blocks the request (e.g., 429 Too Many Requests), don't fail the upload.
-        // Instead, assume true and let the AIClassifier handle title/desc validation.
-        return { isEdu: true, fetchedTitle: '', fetchedDesc: '' };
-    }
-};
-
-// ─── Helper ────────────────────────────────────────────────────────────────────
+// ─── Helper: format video to maintain dual id / _id compatibility ───────────────
 const formatVideo = (video) => {
     try {
-        const json = video.toJSON ? video.toJSON() : video;
+        const json = video.toObject ? video.toObject() : (video.toJSON ? video.toJSON() : video);
+        const id = json._id ? json._id.toString() : (json.id ? json.id.toString() : '');
         let likesArray = [];
-        if (video.likedBy && Array.isArray(video.likedBy)) {
-            likesArray = video.likedBy.map(u => u.id || u._id || u);
-        } else if (json.likedBy && Array.isArray(json.likedBy)) {
-            likesArray = json.likedBy.map(u => u.id || u._id || u);
+        if (Array.isArray(json.likes)) {
+            likesArray = json.likes.map(u => (u._id ? u._id.toString() : (u.id ? u.id.toString() : u.toString())));
         }
         return {
             ...json,
-            _id: json.id,
-            likes: likesArray
+            id,
+            _id: id,
+            likes: likesArray,
+            uploader: json.uploaderId && typeof json.uploaderId === 'object' ? {
+                ...json.uploaderId,
+                id: json.uploaderId._id ? json.uploaderId._id.toString() : json.uploaderId.id,
+                _id: json.uploaderId._id ? json.uploaderId._id.toString() : json.uploaderId.id
+            } : (json.uploader || null),
+            course: json.courseId && typeof json.courseId === 'object' ? {
+                ...json.courseId,
+                id: json.courseId._id ? json.courseId._id.toString() : json.courseId.id,
+                _id: json.courseId._id ? json.courseId._id.toString() : json.courseId.id
+            } : (json.course || null)
         };
     } catch (err) {
         console.error('[formatVideo Debug] Warning formatting video:', err.message);
+        const id = video._id ? video._id.toString() : (video.id ? video.id.toString() : '');
         return {
             ...video,
-            _id: video.id,
+            id,
+            _id: id,
             likes: []
         };
     }
@@ -106,84 +74,20 @@ const getAllVideos = async (req, res) => {
     try {
         console.log(`[GET /api/videos] Request received. User authenticated: ${req.user ? 'Yes (' + req.user.id + ')' : 'No (Guest)'}`);
 
-        // Determine moderation feature launch date (e.g. May 11, 2026) for legacy null check
         const MODERATION_LAUNCH_DATE = new Date('2026-05-11T00:00:00.000Z');
-        const whereClause = {
-            [Op.or]: [
+        const filter = {
+            $or: [
                 { status: 'approved', isEducational: true },
                 { status: 'approved', reviewedByAI: false },
-                {
-                    status: null,
-                    createdAt: { [Op.lt]: MODERATION_LAUNCH_DATE }
-                }
+                { status: null, createdAt: { $lt: MODERATION_LAUNCH_DATE } }
             ]
         };
 
-        let videos = [];
-        try {
-            console.log('[GET /api/videos] Attempting to query Video.findAll with full associations...');
-            videos = await Video.findAll({
-                where: whereClause,
-                include: [
-                    { model: User, as: 'uploader', attributes: ['id', 'username', 'avatar'] },
-                    { model: Course, as: 'course', attributes: ['id', 'title'] },
-                    { model: User, as: 'likedBy', attributes: ['id'] }
-                ],
-                order: [['createdAt', 'DESC']]
-            });
-            console.log(`[GET /api/videos] Rich query successful. Fetched ${videos.length} videos.`);
-        } catch (queryErr) {
-            console.error('[GET /api/videos] Rich query failed, executing fallback query without includes:', queryErr.message);
-            // Fallback: Query all videos without associations to guarantee API returns data.
-            const rawVideos = await Video.findAll({
-                where: whereClause,
-                order: [['createdAt', 'DESC']]
-            });
-            
-            // Populating minimal mock/safe uploader, course, and likes for each raw video to prevent React crashes.
-            videos = await Promise.all(rawVideos.map(async (v) => {
-                const videoJson = v.toJSON ? v.toJSON() : v;
-                
-                // Safe uploader fetch fallback
-                let uploader = null;
-                if (videoJson.uploaderId) {
-                    try {
-                        uploader = await User.findByPk(videoJson.uploaderId, {
-                            attributes: ['id', 'username', 'avatar']
-                        });
-                    } catch (e) {
-                        console.error(`[GET /api/videos] Safe uploader fetch failed for user ${videoJson.uploaderId}:`, e.message);
-                    }
-                }
-                
-                // Safe course fetch fallback
-                let course = null;
-                if (videoJson.courseId) {
-                    try {
-                        course = await Course.findByPk(videoJson.courseId, {
-                            attributes: ['id', 'title']
-                        });
-                    } catch (e) {
-                        console.error(`[GET /api/videos] Safe course fetch failed for course ${videoJson.courseId}:`, e.message);
-                    }
-                }
-
-                // Safe likes fetch fallback
-                let likedBy = [];
-                try {
-                    likedBy = await v.getLikedBy({ attributes: ['id'] }).catch(() => []);
-                } catch (e) {
-                    console.error('[GET /api/videos] Safe likes fetch failed:', e.message);
-                }
-
-                v.uploader = uploader;
-                v.course = course;
-                v.likedBy = likedBy;
-                
-                return v;
-            }));
-            console.log(`[GET /api/videos] Fallback query processed ${videos.length} videos successfully.`);
-        }
+        const videos = await Video.find(filter)
+            .populate('uploaderId', 'id _id username avatar')
+            .populate('courseId', 'id _id title')
+            .sort({ createdAt: -1 })
+            .lean();
 
         res.json(videos.map(formatVideo));
     } catch (err) {
@@ -196,63 +100,30 @@ const getAllVideos = async (req, res) => {
 const getVideoById = async (req, res) => {
     try {
         console.log(`[GET /api/videos/${req.params.id}] Fetching video...`);
-        let video = null;
-        try {
-            video = await Video.findByPk(req.params.id, {
-                include: [
-                    { model: User, as: 'uploader', attributes: ['id', 'username', 'avatar'] },
-                    { model: Course, as: 'course', attributes: ['id', 'title'] },
-                    { model: User, as: 'likedBy', attributes: ['id'] },
-                    {
-                        model: Comment, as: 'comments',
-                        include: [{ model: User, as: 'user', attributes: ['id', 'username', 'avatar'] }],
-                        order: [['createdAt', 'DESC']]
-                    }
-                ]
-            });
-        } catch (queryErr) {
-            console.error(`[GET /api/videos/${req.params.id}] Rich single-query failed, executing fallback:`, queryErr.message);
-            const rawVideo = await Video.findByPk(req.params.id);
-            if (rawVideo) {
-                const videoJson = rawVideo.toJSON ? rawVideo.toJSON() : rawVideo;
-                
-                let uploader = null;
-                if (videoJson.uploaderId) {
-                    uploader = await User.findByPk(videoJson.uploaderId, { attributes: ['id', 'username', 'avatar'] }).catch(() => null);
-                }
-                
-                let course = null;
-                if (videoJson.courseId) {
-                    course = await Course.findByPk(videoJson.courseId, { attributes: ['id', 'title'] }).catch(() => null);
-                }
-                
-                let likedBy = [];
-                try {
-                    likedBy = await rawVideo.getLikedBy({ attributes: ['id'] }).catch(() => []);
-                } catch { }
-                
-                let comments = [];
-                try {
-                    comments = await Comment.findAll({
-                        where: { videoId: req.params.id },
-                        include: [{ model: User, as: 'user', attributes: ['id', 'username', 'avatar'] }],
-                        order: [['createdAt', 'DESC']]
-                    }).catch(() => []);
-                } catch { }
-
-                rawVideo.uploader = uploader;
-                rawVideo.course = course;
-                rawVideo.likedBy = likedBy;
-                rawVideo.comments = comments;
-                
-                video = rawVideo;
-            }
-        }
+        const video = await Video.findById(req.params.id)
+            .populate('uploaderId', 'id _id username avatar')
+            .populate('courseId', 'id _id title')
+            .lean();
 
         if (!video) return res.status(404).json({ message: 'Video not found' });
 
-        const comments = video.comments || [];
-        res.json({ video: formatVideo(video), comments });
+        const comments = await Comment.find({ videoId: video._id })
+            .populate('userId', 'id _id username avatar')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const formattedComments = comments.map(c => ({
+            ...c,
+            id: c._id.toString(),
+            _id: c._id.toString(),
+            user: c.userId ? {
+                ...c.userId,
+                id: c.userId._id ? c.userId._id.toString() : c.userId.id,
+                _id: c.userId._id ? c.userId._id.toString() : c.userId.id
+            } : null
+        }));
+
+        res.json({ video: formatVideo(video), comments: formattedComments });
     } catch (err) {
         console.error(`[GET /api/videos/${req.params.id}] Critical global error:`, err.message);
         res.status(500).json({ message: err.message });
@@ -260,9 +131,6 @@ const getVideoById = async (req, res) => {
 };
 
 // ─── UPLOAD VIDEO ─────────────────────────────────────────────────────────────
-const YouTubeValidator = require('../services/YouTubeValidator');
-
-
 const uploadVideo = async (req, res) => {
     try {
         const uploaderId = req.user.id;
@@ -310,7 +178,6 @@ const uploadVideo = async (req, res) => {
             videoUrl = externalLink;
             sourceType = 'external';
         } else {
-            // Frontend direct Cloudinary URL
             if (req.body.videoUrl) {
                 videoUrl = req.body.videoUrl;
             } else {
@@ -318,18 +185,16 @@ const uploadVideo = async (req, res) => {
             }
         }
 
-        // Thumbnail
         let thumbnailUrl = req.body.thumbnailUrl || '';
 
-        // Run AI Moderation SYNCHRONOUSLY before saving to DB
         console.log(`\n==================================================`);
         console.log(`[UPLOAD DEBUG] ⏳ Starting strict synchronous AI moderation...`);
         console.log(`[UPLOAD DEBUG] Title: "${title}"`);
         console.log(`[UPLOAD DEBUG] Extracted Video URL: ${videoUrl}`);
         console.log(`==================================================\n`);
-        
+
         const aiResult = await AIClassifier.analyzeVideoAsync({
-            videoId: 'temp', // Not saved yet
+            videoId: 'temp',
             videoUrl,
             title,
             description,
@@ -344,53 +209,37 @@ const uploadVideo = async (req, res) => {
         if (!aiResult.allowed) {
             console.log(`[UPLOAD DEBUG] ❌ Moderation Decision: REJECTED`);
             console.log(`[UPLOAD DEBUG] 📝 Rejection Reason: ${aiResult.reason}`);
-            
-            // Auto-delete from Cloudinary if it was a local file upload (not an external link)
+
             if (!isExternal && videoUrl.includes('cloudinary.com')) {
                 try {
-                    // Extract public ID from Cloudinary URL (e.g. ezyedutube/videos/filename)
                     const urlParts = videoUrl.split('/');
                     const filenameWithExt = urlParts.pop();
-                    const folder = urlParts.pop(); // videos
-                    const parentFolder = urlParts.pop(); // ezyedutube
+                    const folder = urlParts.pop();
+                    const parentFolder = urlParts.pop();
                     const filename = filenameWithExt.split('.')[0];
                     const publicId = `${parentFolder}/${folder}/${filename}`;
-                    
+
                     console.log(`[UPLOAD DEBUG] 🗑️ Triggering Cloudinary Cleanup for: ${publicId}`);
                     const deleteResult = await cloudinary.uploader.destroy(publicId, { resource_type: "video" });
                     console.log(`[UPLOAD DEBUG] 🗑️ Cloudinary Delete Result:`, deleteResult);
                 } catch (cleanupErr) {
                     console.error('[UPLOAD DEBUG] ❌ Failed to delete video from Cloudinary:', cleanupErr);
                 }
-            } else {
-                console.log(`[UPLOAD DEBUG] Skipped Cloudinary cleanup (external link or invalid URL).`);
             }
-            
-            // Reject request with proper error message. Prevent DB save.
-            console.log("[DB INSERT BLOCKED]");
-            return res.status(400).json({ 
+
+            return res.status(400).json({
                 success: false,
                 message: "This resource is not educational and cannot be uploaded.",
                 reason: aiResult.reason
             });
         }
 
-        // Final Safeguard before DB insertion
-        if (!aiResult.allowed) {
-            console.log("[DB INSERT BLOCKED]");
-            return res.status(400).json({
-                success: false,
-                message: "This resource is not educational and cannot be uploaded."
-            });
-        }
-
         console.log(`[UPLOAD DEBUG] ✅ Moderation Decision: APPROVED for: "${title}"`);
         console.log(`[UPLOAD DEBUG] 💾 Triggering DB Save...`);
 
-        // Create approved video record in MySQL
         const newVideo = await Video.create({
-            title: title,
-            description: description,
+            title,
+            description,
             subject: req.body.subject || 'General',
             videoUrl,
             thumbnailUrl,
@@ -403,7 +252,8 @@ const uploadVideo = async (req, res) => {
             isEducational: true,
             moderationScore: aiResult.score,
             reviewedByAI: true,
-            approvedAt: new Date()
+            approvedAt: new Date(),
+            likes: []
         });
 
         console.log("[VIDEO SAVED]");
@@ -422,11 +272,11 @@ const uploadVideo = async (req, res) => {
 // ─── DELETE VIDEO (Admin) ─────────────────────────────────────────────────────
 const deleteVideoAdmin = async (req, res) => {
     try {
-        const video = await Video.findByPk(req.params.id);
+        const video = await Video.findById(req.params.id);
         if (!video) return res.status(404).json({ message: 'Video not found' });
 
-        await Comment.destroy({ where: { videoId: req.params.id } });
-        await video.destroy();
+        await Comment.deleteMany({ videoId: req.params.id });
+        await Video.findByIdAndDelete(req.params.id);
 
         res.json({ message: 'Video deleted by admin' });
     } catch (err) {
@@ -437,13 +287,13 @@ const deleteVideoAdmin = async (req, res) => {
 // ─── DELETE VIDEO (Owner) ─────────────────────────────────────────────────────
 const deleteVideoUser = async (req, res) => {
     try {
-        const video = await Video.findByPk(req.params.id);
+        const video = await Video.findById(req.params.id);
         if (!video) return res.status(404).json({ message: 'Video not found' });
-        if (video.uploaderId !== req.user.id)
+        if (video.uploaderId && video.uploaderId.toString() !== req.user.id.toString())
             return res.status(403).json({ message: 'Not authorized to delete this video' });
 
-        await Comment.destroy({ where: { videoId: req.params.id } });
-        await video.destroy();
+        await Comment.deleteMany({ videoId: req.params.id });
+        await Video.findByIdAndDelete(req.params.id);
 
         res.json({ message: 'Video deleted' });
     } catch (err) {
@@ -463,11 +313,20 @@ const postComment = async (req, res) => {
             videoId: req.params.id
         });
 
-        const populated = await Comment.findByPk(newComment.id, {
-            include: [{ model: User, as: 'user', attributes: ['id', 'username', 'avatar'] }]
-        });
+        const populated = await Comment.findById(newComment._id)
+            .populate('userId', 'id _id username avatar')
+            .lean();
 
-        res.status(201).json({ ...populated.toJSON(), _id: populated.id });
+        res.status(201).json({
+            ...populated,
+            id: populated._id.toString(),
+            _id: populated._id.toString(),
+            user: populated.userId ? {
+                ...populated.userId,
+                id: populated.userId._id ? populated.userId._id.toString() : populated.userId.id,
+                _id: populated.userId._id ? populated.userId._id.toString() : populated.userId.id
+            } : null
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -479,23 +338,25 @@ const likeVideo = async (req, res) => {
         const { userId } = req.body;
         if (!userId) return res.status(401).json({ message: 'Login required' });
 
-        const video = await Video.findByPk(req.params.id, {
-            include: [{ model: User, as: 'likedBy', attributes: ['id'] }]
-        });
+        const video = await Video.findById(req.params.id);
         if (!video) return res.status(404).json({ message: 'Video not found' });
 
-        const alreadyLiked = video.likedBy.some(u => u.id === parseInt(userId));
+        if (!Array.isArray(video.likes)) video.likes = [];
+        const index = video.likes.findIndex(id => id.toString() === userId.toString());
+        const alreadyLiked = index !== -1;
+
         if (alreadyLiked) {
-            await video.removeLikedBy(userId);
+            video.likes.splice(index, 1);
         } else {
-            await video.addLikedBy(userId);
+            video.likes.push(userId);
         }
 
-        const updated = await Video.findByPk(req.params.id, {
-            include: [{ model: User, as: 'likedBy', attributes: ['id'] }]
-        });
+        await video.save();
 
-        res.json({ likes: updated.likedBy.map(u => u.id), liked: !alreadyLiked });
+        res.json({
+            likes: video.likes.map(id => id.toString()),
+            liked: !alreadyLiked
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -507,50 +368,46 @@ const subscribeVideo = async (req, res) => {
         const { userId } = req.body;
         if (!userId) return res.status(401).json({ message: 'Login required' });
 
-        const video = await Video.findByPk(req.params.id, { attributes: ['uploaderId'] });
+        const video = await Video.findById(req.params.id).select('uploaderId');
         if (!video) return res.status(404).json({ message: 'Video not found' });
 
         const uploaderId = video.uploaderId;
-        if (uploaderId === parseInt(userId))
+        if (uploaderId && uploaderId.toString() === userId.toString())
             return res.status(400).json({ message: 'Cannot subscribe to yourself' });
 
-        const channel = await User.findByPk(uploaderId, {
-            include: [{ model: User, as: 'subscribers', attributes: ['id'] }]
-        });
+        const channel = await User.findById(uploaderId);
         if (!channel) return res.status(404).json({ message: 'Channel not found' });
 
-        const alreadySubbed = channel.subscribers.some(s => s.id === parseInt(userId));
+        if (!Array.isArray(channel.subscribers)) channel.subscribers = [];
+        const subIndex = channel.subscribers.findIndex(id => id.toString() === userId.toString());
+        const alreadySubbed = subIndex !== -1;
 
         if (alreadySubbed) {
-            await channel.removeSubscribers(userId);
+            channel.subscribers.splice(subIndex, 1);
         } else {
-            await channel.addSubscribers(userId);
+            channel.subscribers.push(userId);
         }
 
-        const updated = await User.findByPk(uploaderId, {
-            include: [{ model: User, as: 'subscribers', attributes: ['id'] }]
-        });
+        await channel.save();
 
-        res.json({ subscribers: updated.subscribers.map(s => s.id), subscribed: !alreadySubbed });
+        res.json({
+            subscribers: channel.subscribers.map(id => id.toString()),
+            subscribed: !alreadySubbed
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 };
 
 // ─── INCREMENT VIEW ────────────────────────────────────────────────────────────
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_eduhub_2026';
-
 const incrementView = async (req, res) => {
     try {
-        const video = await Video.findByPk(req.params.id);
+        const video = await Video.findById(req.params.id);
         if (!video) return res.status(404).json({ message: 'Video not found' });
 
-        // Cooldown period: 24 hours
         const COOLDOWN_HOURS = 24;
         const cooldownTime = new Date(Date.now() - COOLDOWN_HOURS * 60 * 60 * 1000);
 
-        // Optional User identification from JWT
         const authHeader = req.headers.authorization;
         let userId = null;
         if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -567,51 +424,40 @@ const incrementView = async (req, res) => {
         const userAgent = req.headers['user-agent'] || 'unknown';
 
         let existingView = null;
-
         if (userId) {
-            // Registered user tracking: check userId + videoId
             existingView = await VideoView.findOne({
-                where: {
-                    videoId: video.id,
-                    userId: userId,
-                    viewedAt: {
-                        [Op.gt]: cooldownTime
-                    }
-                }
+                videoId: video._id,
+                userId: userId,
+                viewedAt: { $gt: cooldownTime }
             });
         } else {
-            // Guest user tracking: check ipAddress + userAgent + videoId
             existingView = await VideoView.findOne({
-                where: {
-                    videoId: video.id,
-                    ipAddress: ipAddress,
-                    userAgent: userAgent,
-                    userId: null,
-                    viewedAt: {
-                        [Op.gt]: cooldownTime
-                    }
-                }
+                videoId: video._id,
+                ipAddress: ipAddress,
+                userAgent: userAgent,
+                userId: null,
+                viewedAt: { $gt: cooldownTime }
             });
         }
 
         if (existingView) {
-            // Duplicate/refresh detected within 24h: bypass view incrementing
             return res.json({ views: video.views });
         }
 
-        // Create view entry
         await VideoView.create({
-            videoId: video.id,
-            userId: userId,
-            ipAddress: ipAddress,
-            userAgent: userAgent
+            videoId: video._id,
+            userId: userId || null,
+            ipAddress,
+            userAgent
         });
 
-        // Increment views
-        await video.increment('views', { by: 1 });
-        const updatedVideo = await Video.findByPk(video.id);
+        const updated = await Video.findByIdAndUpdate(
+            video._id,
+            { $inc: { views: 1 } },
+            { new: true }
+        );
 
-        res.json({ views: updatedVideo.views });
+        res.json({ views: updated ? updated.views : video.views + 1 });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -621,20 +467,18 @@ const incrementView = async (req, res) => {
 const deleteComment = async (req, res) => {
     try {
         const { commentId } = req.params;
-        const comment = await Comment.findByPk(commentId, {
-            include: [{ model: Video, as: 'video' }]
-        });
+        const comment = await Comment.findById(commentId).populate('videoId');
         if (!comment) return res.status(404).json({ message: 'Comment not found' });
 
-        const userId = req.user.id;
-        const isCommentOwner = comment.userId === userId;
-        const isVideoOwner = comment.video && comment.video.uploaderId === userId;
+        const userId = req.user.id.toString();
+        const isCommentOwner = comment.userId && comment.userId.toString() === userId;
+        const isVideoOwner = comment.videoId && comment.videoId.uploaderId && comment.videoId.uploaderId.toString() === userId;
 
         if (!isCommentOwner && !isVideoOwner) {
             return res.status(403).json({ message: 'Unauthorized to delete this comment' });
         }
 
-        await comment.destroy();
+        await Comment.findByIdAndDelete(commentId);
         res.json({ success: true, message: 'Comment deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -644,7 +488,7 @@ const deleteComment = async (req, res) => {
 // ─── SHARE COUNT ───────────────────────────────────────────────────────────────
 const shareVideo = async (req, res) => {
     try {
-        const video = await Video.findByPk(req.params.id);
+        const video = await Video.findById(req.params.id);
         if (!video) return res.status(404).json({ message: 'Video not found' });
         res.json({ message: 'Share recorded', shares: 0 });
     } catch (err) {

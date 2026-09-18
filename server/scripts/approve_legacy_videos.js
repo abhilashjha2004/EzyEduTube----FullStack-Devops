@@ -1,28 +1,27 @@
-const { Op } = require('sequelize');
 const Video = require('../models/Video');
-const sequelize = require('../config/database'); // Ensure db connection initializes
+const connectDB = require('../config/database');
 
 const approveLegacyVideos = async () => {
     try {
-        await sequelize.authenticate();
-        console.log('✅ Connected to database for legacy video approval.');
+        await connectDB();
+        console.log('✅ Connected to MongoDB for legacy video approval.');
 
-        const [updatedRowsCount] = await Video.update({
-            status: 'approved',
-            isEducational: true,
-            moderationScore: 100,
-            reviewedByAI: true,
-            approvedAt: new Date()
+        const result = await Video.updateMany({
+            $or: [
+                { status: null },
+                { reviewedByAI: null }
+            ]
         }, {
-            where: {
-                [Op.or]: [
-                    { status: null },
-                    { reviewedByAI: null }
-                ]
+            $set: {
+                status: 'approved',
+                isEducational: true,
+                moderationScore: 100,
+                reviewedByAI: true,
+                approvedAt: new Date()
             }
         });
 
-        console.log(`✅ Approved legacy videos: ${updatedRowsCount}`);
+        console.log(`✅ Approved legacy videos count: ${result.modifiedCount}`);
         process.exit(0);
     } catch (error) {
         console.error('❌ Failed to approve legacy videos:', error);

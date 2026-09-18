@@ -1,28 +1,41 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const Document = sequelize.define('Document', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
+const documentSchema = new mongoose.Schema({
     title: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: String,
+        required: true,
+        trim: true
     },
     documentUrl: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: String,
+        required: true
     },
     type: {
-        type: DataTypes.ENUM('pdf', 'link', 'other'),
-        defaultValue: 'pdf'
+        type: String,
+        enum: ['pdf', 'link', 'other'],
+        default: 'pdf'
+    },
+    courseId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Course',
+        required: true
     }
 }, {
-    tableName: 'documents',
-    freezeTableName: true,
-    timestamps: true
+    timestamps: true,
+    toJSON: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    },
+    toObject: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    }
 });
 
-module.exports = Document;
+module.exports = mongoose.model('Document', documentSchema);

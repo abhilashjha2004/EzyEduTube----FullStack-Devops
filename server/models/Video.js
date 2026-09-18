@@ -1,85 +1,128 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const Video = sequelize.define('Video', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
+const videoSchema = new mongoose.Schema({
     title: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: String,
+        required: true,
+        trim: true
     },
     description: {
-        type: DataTypes.TEXT,
-        allowNull: true
+        type: String,
+        default: ''
     },
     videoUrl: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: String,
+        required: true
     },
     thumbnailUrl: {
-        type: DataTypes.STRING,
-        allowNull: true
+        type: String,
+        default: ''
     },
     duration: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
+        type: Number,
+        default: 0
     },
     views: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
+        type: Number,
+        default: 0
     },
     sourceType: {
-        type: DataTypes.ENUM('upload', 'external'),
-        defaultValue: 'upload'
+        type: String,
+        enum: ['upload', 'external'],
+        default: 'upload'
     },
     subject: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        defaultValue: 'General'
+        type: String,
+        default: 'General'
     },
     orderIndex: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
+        type: Number,
+        default: 0
     },
     status: {
-        type: DataTypes.ENUM('pending', 'approved', 'rejected'),
-        defaultValue: 'pending'
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
     },
     isEducational: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
+        type: Boolean,
+        default: false
     },
     moderationScore: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
+        type: Number,
+        default: 0
     },
     visualConfidence: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
+        type: Number,
+        default: 0
     },
     transcriptConfidence: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
+        type: Number,
+        default: 0
     },
     moderationReason: {
-        type: DataTypes.TEXT,
-        allowNull: true
+        type: String,
+        default: null
     },
     approvedAt: {
-        type: DataTypes.DATE,
-        allowNull: true
+        type: Date,
+        default: null
     },
     reviewedByAI: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
-    }
+        type: Boolean,
+        default: false
+    },
+    uploaderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+    courseId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Course',
+        default: null
+    },
+    likes: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, {
     timestamps: true,
-    tableName: 'videos',
-    freezeTableName: true
+    toJSON: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    },
+    toObject: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    }
 });
 
-module.exports = Video;
+// Virtual aliases for compatibility
+videoSchema.virtual('uploader', {
+    ref: 'User',
+    localField: 'uploaderId',
+    foreignField: '_id',
+    justOne: true
+});
+
+videoSchema.virtual('course', {
+    ref: 'Course',
+    localField: 'courseId',
+    foreignField: '_id',
+    justOne: true
+});
+
+videoSchema.virtual('likedBy', {
+    ref: 'User',
+    localField: 'likes',
+    foreignField: '_id'
+});
+
+module.exports = mongoose.model('Video', videoSchema);

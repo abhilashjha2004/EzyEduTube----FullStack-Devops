@@ -1,36 +1,50 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const Notification = sequelize.define('Notification', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
+const notificationSchema = new mongoose.Schema({
+    recipientId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
     type: {
-        type: DataTypes.ENUM('new_video', 'comment', 'like', 'welcome', 'system'),
-        defaultValue: 'system'
+        type: String,
+        enum: ['new_video', 'comment', 'like', 'welcome', 'system'],
+        default: 'system'
     },
     title: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: String,
+        required: true
     },
     message: {
-        type: DataTypes.TEXT,
-        defaultValue: ''
+        type: String,
+        default: ''
     },
     link: {
-        type: DataTypes.STRING,
-        defaultValue: ''
+        type: String,
+        default: ''
     },
     read: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
+        type: Boolean,
+        default: false
     }
 }, {
-    tableName: 'notifications',
-    freezeTableName: true,
-    timestamps: true
+    timestamps: true,
+    toJSON: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    },
+    toObject: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    }
 });
 
-module.exports = Notification;
+notificationSchema.index({ recipientId: 1, createdAt: -1 });
+
+module.exports = mongoose.model('Notification', notificationSchema);

@@ -1,36 +1,47 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const VideoView = sequelize.define('VideoView', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
+const videoViewSchema = new mongoose.Schema({
     videoId: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Video',
+        required: true
     },
     userId: {
-        type: DataTypes.INTEGER,
-        allowNull: true // Null if guest/anonymous
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
     },
     ipAddress: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: String,
+        required: true
     },
     userAgent: {
-        type: DataTypes.TEXT,
-        allowNull: true // Store user agent as simple device fingerprint for guests
+        type: String,
+        default: null
     },
     viewedAt: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW
+        type: Date,
+        default: Date.now
     }
 }, {
-    tableName: 'videoviews',
-    freezeTableName: true,
-    timestamps: false
+    timestamps: false,
+    toJSON: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    },
+    toObject: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    }
 });
 
-module.exports = VideoView;
+videoViewSchema.index({ videoId: 1, userId: 1, viewedAt: -1 });
+videoViewSchema.index({ videoId: 1, ipAddress: 1, viewedAt: -1 });
+
+module.exports = mongoose.model('VideoView', videoViewSchema);

@@ -11,14 +11,17 @@ const googleConfigured = () =>
     !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
 // ─── Helper: Build safe user payload ─────────────────────────────────────────
-const safeUser = (user) => ({
-    _id: user.id,
-    id: user.id,
-    username: user.username,
-    email: user.email || '',
-    avatar: user.avatar || '',
-    role: user.role
-});
+const safeUser = (user) => {
+    const id = user._id ? user._id.toString() : user.id;
+    return {
+        _id: id,
+        id: id,
+        username: user.username,
+        email: user.email || '',
+        avatar: user.avatar || '',
+        role: user.role
+    };
+};
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 const register = async (req, res) => {
@@ -29,16 +32,31 @@ const register = async (req, res) => {
         if (password.length < 6)
             return res.status(400).json({ message: 'Password must be at least 6 characters' });
 
-        const existing = await User.findOne({ where: { username } });
+        const existing = await User.findOne({ username });
         if (existing)
             return res.status(400).json({ message: 'Username already taken' });
 
-        const hashed = await bcrypt.hash(password, 10);
-        const user = await User.create({ username, password: hashed, email: email || null });
+        if (email) {
+            const existingEmail = await User.findOne({ email: email.toLowerCase().trim() });
+            if (existingEmail)
+                return res.status(400).json({ message: 'Email already registered' });
+        }
 
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        const hashed = await bcrypt.hash(password, 10);
+        const user = await User.create({
+            username: username.trim(),
+            password: hashed,
+            email: email ? email.toLowerCase().trim() : null
+        });
+
+        const userId = user._id.toString();
+        const token = jwt.sign({ id: userId, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
         res.status(201).json({ user: safeUser(user), token });
     } catch (err) {
+        if (err.code === 11000) {
+            const field = Object.keys(err.keyPattern || {})[0] || 'field';
+            return res.status(400).json({ message: `${field.charAt(0).toUpperCase() + field.slice(1)} already registered` });
+        }
         res.status(500).json({ message: err.message });
     }
 };
@@ -47,13 +65,14 @@ const register = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { username, password } = req.body;
-        const user = await User.findOne({ where: { username } });
+        const user = await User.findOne({ username });
         if (!user) return res.status(400).json({ message: 'Invalid username or password' });
 
         const match = await bcrypt.compare(password, user.password || '');
         if (!match) return res.status(400).json({ message: 'Invalid username or password' });
 
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        const userId = user._id.toString();
+        const token = jwt.sign({ id: userId, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ user: safeUser(user), token });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -63,14 +82,11 @@ const login = async (req, res) => {
 // ─── Get User By Id ───────────────────────────────────────────────────────────
 const getUserById = async (req, res) => {
     try {
-        const user = await User.findByPk(req.params.id, {
-            attributes: { exclude: ['password'] },
-            include: [{ model: User, as: 'subscribers', attributes: ['id'] }]
-        });
+        const user = await User.findById(req.params.id).select('-password');
         if (!user) return res.status(404).json({ message: 'User not found' });
         
         const payload = safeUser(user);
-        payload.subscribers = user.subscribers ? user.subscribers.map(s => s.id) : [];
+        payload.subscribers = user.subscribers ? user.subscribers.map(s => s.toString()) : [];
         res.json(payload);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -99,7 +115,8 @@ const googleOAuthCallback = (req, res, next) => {
     })(req, res, (err) => {
         if (err) return res.redirect(`${CLIENT_URL}/login?error=google`);
         const user = req.user;
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        const userId = user._id ? user._id.toString() : user.id;
+        const token = jwt.sign({ id: userId, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
         const payload = JSON.stringify({ user: safeUser(user), token });
         res.redirect(`${CLIENT_URL}/auth/callback?user=${encodeURIComponent(payload)}`);
     });

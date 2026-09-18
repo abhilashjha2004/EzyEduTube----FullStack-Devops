@@ -3,7 +3,7 @@
 ![Stack](https://img.shields.io/badge/Stack-MERN-blue)
 ![Frontend](https://img.shields.io/badge/Frontend-React%20%7C%20Tailwind-success)
 ![Backend](https://img.shields.io/badge/Backend-Node.js%20%7C%20Express-green)
-![Database](https://img.shields.io/badge/Database-MySQL-blue)
+![Database](https://img.shields.io/badge/Database-MongoDB%20Atlas-green)
 ![Storage](https://img.shields.io/badge/Storage-Cloudinary-orange)
 ![DevOps](https://img.shields.io/badge/DevOps-Docker%20%7C%20CI%2FCD-orange)
 ![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions%20%7C%20Jenkins-red)
@@ -12,9 +12,9 @@
 
 ## 🚀 Overview
 
-EzyEduTube is a **full-stack learning platform** providing a **distraction-free educational environment**. It organizes educational videos, notes, and practice questions into structured course paths while filtering out non-educational content.
+EzyEduTube is a **full-stack learning platform** providing a **distraction-free educational environment**. It organizes educational videos, notes, and practice questions into structured course paths while filtering out non-educational content using AI.
 
-The project uses **MySQL + Cloudinary** for its data layer, with **Sequelize ORM** for schema management, and is wrapped in a **cloud-native Docker** setup with automated CI/CD.
+The project uses **MongoDB Atlas + Cloudinary** for its data layer, with **Mongoose ODM** for schema management, and is wrapped in a **cloud-native Docker** setup with automated CI/CD.
 
 ---
 
@@ -22,7 +22,7 @@ The project uses **MySQL + Cloudinary** for its data layer, with **Sequelize ORM
 
 * 📚 Structured course-based learning system
 * ☁️ Cloudinary storage for videos, thumbnails & documents
-* 🗄️ MySQL relational database with Sequelize ORM
+* 🍃 MongoDB Atlas cloud database with Mongoose ODM
 * 🚫 Distraction-free platform (no irrelevant content)
 * 🤖 AI-powered content filtering (keyword + YouTube category check)
 * 🔐 Secure JWT authentication (local + Google OAuth)
@@ -51,7 +51,7 @@ graph TD
         Browser --> NGINX
         NGINX --> ReactFrontend
         NGINX --> NodeAPI
-        NodeAPI --> MySQL[(MySQL 8.0)]
+        NodeAPI --> MongoDBAtlas[(MongoDB Atlas)]
         NodeAPI --> Cloudinary[(Cloudinary)]
     end
 ```
@@ -64,7 +64,7 @@ graph TD
 | -------- | -------------------------------- |
 | Frontend | React.js, Tailwind CSS           |
 | Backend  | Node.js, Express.js              |
-| Database | **MySQL 8.0** (via Sequelize ORM)|
+| Database | **MongoDB Atlas** (via Mongoose) |
 | Storage  | **Cloudinary** (video/image/PDF) |
 | Auth     | JWT + Google OAuth2              |
 | DevOps   | Docker, Docker Compose           |
@@ -80,11 +80,11 @@ EzyEduTube/
 ├── client/                     # React + Vite frontend
 ├── server/                     # Node.js + Express backend
 │   ├── config/
-│   │   ├── database.js         # Sequelize MySQL connection
+│   │   ├── database.js         # Mongoose MongoDB Atlas connection
 │   │   ├── cloudinary.js       # Cloudinary + Multer config
 │   │   └── passport.js         # Google OAuth strategy
 │   ├── models/
-│   │   ├── index.js            # Associations (relationships)
+│   │   ├── index.js            # Mongoose models aggregator
 │   │   ├── User.js
 │   │   ├── Course.js
 │   │   ├── Video.js
@@ -92,15 +92,15 @@ EzyEduTube/
 │   │   ├── Enrollment.js
 │   │   ├── Progress.js
 │   │   ├── Comment.js
-│   │   └── Notification.js
+│   │   ├── Notification.js
+│   │   └── VideoView.js
 │   ├── controllers/
 │   ├── routes/
 │   ├── middleware/
-│   ├── migrate_mongo_to_mysql.js  # Data migration script
 │   └── index.js
 ├── nginx/
-├── docker-compose.yml          # Dev (MySQL + Mongo side-by-side)
-├── docker-compose.prod.yml     # Production
+├── docker-compose.yml          # Dev setup
+├── docker-compose.prod.yml     # Production setup
 └── README.md
 ```
 
@@ -113,14 +113,8 @@ Copy `server/.env.example` to `server/.env` and fill in your values:
 ```env
 PORT=5000
 
-# MySQL (primary database)
-DB_HOST=127.0.0.1
-DB_USER=root
-DB_PASSWORD=root
-DB_NAME=ezyedutube
-
-# MongoDB (only needed to run the migration script)
-MONGO_URI=mongodb://127.0.0.1:27017/eduhub
+# MongoDB Atlas
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/EzyEduTube?retryWrites=true&w=majority
 
 # Auth
 JWT_SECRET=your_jwt_secret
@@ -136,6 +130,13 @@ CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 ```
+
+### MongoDB Atlas Setup
+1. Create a free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
+2. Create a Database User with read/write access.
+3. In **Network Access**, allow access from anywhere (`0.0.0.0/0`) or whitelist your Render server IP.
+4. Click **Connect** → **Drivers** (Node.js) and copy the connection string into `MONGODB_URI`.
+5. You can also connect directly via **MongoDB Compass** using the same connection string.
 
 ### Setting Up Cloudinary
 1. Sign up at [cloudinary.com](https://cloudinary.com) (free tier available).
@@ -155,13 +156,6 @@ CLOUDINARY_API_SECRET=your_api_secret
 docker-compose up --build
 ```
 
-This starts:
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost:5173 |
-| Backend API | http://localhost:5000 |
-| MySQL | localhost:3306 |
-
 ### Production Deployment
 
 ```bash
@@ -176,50 +170,6 @@ Application accessible via NGINX at `http://localhost`.
 docker-compose down
 ```
 
-### Remove MySQL Volume (reset DB)
-
-```bash
-docker-compose down -v
-```
-
----
-
-## 🗄️ Database Schema (Relational)
-
-```
-users (id, username, email, password, role, googleId, avatar)
-  └─ courses (id, title, description, subject, thumbnailUrl, teacherId→users)
-        └─ videos (id, title, videoUrl, thumbnailUrl, duration, views, courseId, uploaderId)
-        └─ documents (id, title, documentUrl, type, courseId)
-  └─ enrollments (id, status, studentId→users, courseId→courses)
-  └─ progress (id, watchedSeconds, completed, studentId→users, videoId→videos)
-  └─ notifications (id, type, title, message, link, read, recipientId→users)
-
-videos └─ comments (id, content, userId→users, videoId→videos)
-users ↔ users (Subscriptions — self-referential many-to-many)
-users ↔ videos (VideoLikes — many-to-many)
-```
-
----
-
-## 📦 Data Migration (MongoDB → MySQL)
-
-If you have existing data in MongoDB, run the migration script **after** MySQL is up:
-
-```bash
-# 1. Make sure both MongoDB and MySQL are running
-# 2. Set MONGO_URI and DB_* in server/.env
-
-cd server
-npm run migrate
-```
-
-The script:
-- Reads all `Users`, `Videos`, `Comments`, `Notifications`, and `Subscriptions` from MongoDB.
-- Maps MongoDB ObjectIds → MySQL integer IDs.
-- Wraps all existing videos under a **"Legacy Migrated Content"** course.
-- Idempotent per-record (skips duplicates with a warning).
-
 ---
 
 ## 🔌 API Endpoints
@@ -228,10 +178,10 @@ The script:
 |--------|----------|------|-------------|
 | POST | `/api/auth/register` | ❌ | Register user |
 | POST | `/api/auth/login` | ❌ | Login |
-| GET | `/api/auth/:id` | ❌ | Get user by ID |
-| GET | `/api/videos` | ❌ | All videos |
+| GET | `/api/auth/user/:id` | ❌ | Get user by ID |
+| GET | `/api/videos` | ❌ | All approved videos |
 | GET | `/api/videos/:id` | ❌ | Single video + comments |
-| POST | `/api/videos/upload` | ✅ | Upload video (Cloudinary) |
+| POST | `/api/videos/upload` | ✅ | Upload video (Cloudinary metadata) |
 | DELETE | `/api/videos/:id` | 🔐 Admin | Delete video |
 | POST | `/api/videos/:id/like` | ❌ | Like/Unlike |
 | POST | `/api/videos/:id/comments` | ❌ | Post comment |
@@ -241,26 +191,21 @@ The script:
 | POST | `/api/courses/:id/enroll` | ✅ | Enroll in course |
 | GET | `/api/courses/my/enrollments` | ✅ | My enrollments |
 | GET | `/api/notifications/:userId` | ❌ | User notifications |
+| GET | `/api/download/formats` | ❌ | Fetch video download formats |
+| GET | `/api/download/stream` | ❌ | Stream video file download |
 
 ---
 
-## ⚙️ CI/CD Pipelines
+## 🚀 Render Deployment Notes
 
-### GitHub Actions (`.github/workflows/ci-cd.yml`)
-Triggers on push to `main` — builds, tests, and pushes Docker images.
-
-### Jenkins (`Jenkinsfile`)
-Triggered via GitHub Webhook — full build + push + deploy pipeline.
-
----
-
-## 🔮 Future Scope
-
-* 💳 Payment Integration
-* 📊 User Analytics Dashboard
-* 🧠 AI-based Recommendations
-* ☸️ Kubernetes Orchestration
-* 🔒 SSL/TLS with Certbot
+When deploying the backend on Render:
+1. In the **Render Dashboard → Environment Variables**, add:
+   - `MONGODB_URI`: Your MongoDB Atlas URI.
+   - `JWT_SECRET`: Your production JWT secret.
+   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
+   - `CLIENT_URL`: `https://ezy-edu-tube-education-only-online.vercel.app`.
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`.
+2. Delete the old Railway MySQL variables (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL`) from the Render dashboard.
 
 ---
 
@@ -268,9 +213,3 @@ Triggered via GitHub Webhook — full build + push + deploy pipeline.
 
 **Abhilash Kumar Jha**
 B.Tech CSE | Full Stack Developer | DevOps Enthusiast
-
----
-
-## ⭐ Support
-
-If you like this project, give it a ⭐ on GitHub!

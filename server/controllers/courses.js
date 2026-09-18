@@ -4,13 +4,23 @@ const { uploadToCloudinary } = require('../config/cloudinary');
 // ─── GET ALL COURSES ──────────────────────────────────────────────────────────
 const getAllCourses = async (req, res) => {
     try {
-        const courses = await Course.findAll({
-            include: [
-                { model: User, as: 'teacher', attributes: ['id', 'username', 'avatar'] }
-            ],
-            order: [['createdAt', 'DESC']]
-        });
-        res.json(courses);
+        const courses = await Course.find()
+            .populate('teacherId', 'username avatar')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const formatted = courses.map(c => ({
+            ...c,
+            id: c._id.toString(),
+            teacher: c.teacherId ? {
+                id: c.teacherId._id ? c.teacherId._id.toString() : c.teacherId,
+                _id: c.teacherId._id ? c.teacherId._id.toString() : c.teacherId,
+                username: c.teacherId.username,
+                avatar: c.teacherId.avatar
+            } : null
+        }));
+
+        res.json(formatted);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -19,15 +29,38 @@ const getAllCourses = async (req, res) => {
 // ─── GET SINGLE COURSE ────────────────────────────────────────────────────────
 const getCourseById = async (req, res) => {
     try {
-        const course = await Course.findByPk(req.params.id, {
-            include: [
-                { model: User, as: 'teacher', attributes: ['id', 'username', 'avatar'] },
-                { model: Video, as: 'videos', order: [['orderIndex', 'ASC']] },
-                { model: Document, as: 'documents' }
-            ]
-        });
+        const course = await Course.findById(req.params.id)
+            .populate('teacherId', 'username avatar')
+            .lean();
+
         if (!course) return res.status(404).json({ message: 'Course not found' });
-        res.json(course);
+
+        const videos = await Video.find({ courseId: course._id }).sort({ orderIndex: 1 }).lean();
+        const documents = await Document.find({ courseId: course._id }).lean();
+
+        const response = {
+            ...course,
+            id: course._id.toString(),
+            teacher: course.teacherId ? {
+                id: course.teacherId._id ? course.teacherId._id.toString() : course.teacherId,
+                _id: course.teacherId._id ? course.teacherId._id.toString() : course.teacherId,
+                username: course.teacherId.username,
+                avatar: course.teacherId.avatar
+            } : null,
+            videos: videos.map(v => ({
+                ...v,
+                id: v._id.toString(),
+                _id: v._id.toString(),
+                likes: Array.isArray(v.likes) ? v.likes.map(l => l.toString()) : []
+            })),
+            documents: documents.map(d => ({
+                ...d,
+                id: d._id.toString(),
+                _id: d._id.toString()
+            }))
+        };
+
+        res.json(response);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -61,13 +94,17 @@ const createCourse = async (req, res) => {
 // ─── UPDATE COURSE ────────────────────────────────────────────────────────────
 const updateCourse = async (req, res) => {
     try {
-        const course = await Course.findByPk(req.params.id);
+        const course = await Course.findById(req.params.id);
         if (!course) return res.status(404).json({ message: 'Course not found' });
-        if (course.teacherId !== req.user.id && req.user.role !== 'admin')
+        if (course.teacherId.toString() !== req.user.id.toString() && req.user.role !== 'admin')
             return res.status(403).json({ message: 'Not authorized' });
 
         const { title, description, subject } = req.body;
-        await course.update({ title, description, subject });
+        if (title !== undefined) course.title = title;
+        if (description !== undefined) course.description = description;
+        if (subject !== undefined) course.subject = subject;
+
+        await course.save();
         res.json(course);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -77,12 +114,17 @@ const updateCourse = async (req, res) => {
 // ─── DELETE COURSE ────────────────────────────────────────────────────────────
 const deleteCourse = async (req, res) => {
     try {
-        const course = await Course.findByPk(req.params.id);
+        const course = await Course.findById(req.params.id);
         if (!course) return res.status(404).json({ message: 'Course not found' });
-        if (course.teacherId !== req.user.id && req.user.role !== 'admin')
+        if (course.teacherId.toString() !== req.user.id.toString() && req.user.role !== 'admin')
             return res.status(403).json({ message: 'Not authorized' });
 
-        await course.destroy(); // cascades to videos, documents, enrollments
+        // Cascades to videos, documents, enrollments
+        await Video.deleteMany({ courseId: course._id });
+        await Document.deleteMany({ courseId: course._id });
+        await Enrollment.deleteMany({ courseId: course._id });
+        await Course.findByIdAndDelete(course._id);
+
         res.json({ message: 'Course deleted' });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -93,14 +135,17 @@ const deleteCourse = async (req, res) => {
 const enrollCourse = async (req, res) => {
     try {
         const studentId = req.user.id;
-        const courseId = parseInt(req.params.id);
+        const courseId = req.params.id;
 
-        const [enrollment, created] = await Enrollment.findOrCreate({
-            where: { studentId, courseId },
-            defaults: { studentId, courseId, status: 'active' }
+        const existing = await Enrollment.findOne({ studentId, courseId });
+        if (existing) return res.status(409).json({ message: 'Already enrolled' });
+
+        const enrollment = await Enrollment.create({
+            studentId,
+            courseId,
+            status: 'active'
         });
 
-        if (!created) return res.status(409).json({ message: 'Already enrolled' });
         res.status(201).json({ message: 'Enrolled successfully', enrollment });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -110,11 +155,24 @@ const enrollCourse = async (req, res) => {
 // ─── GET MY ENROLLMENTS ───────────────────────────────────────────────────────
 const getMyEnrollments = async (req, res) => {
     try {
-        const enrollments = await Enrollment.findAll({
-            where: { studentId: req.user.id },
-            include: [{ model: Course, as: 'course', include: [{ model: User, as: 'teacher', attributes: ['username'] }] }]
-        });
-        res.json(enrollments);
+        const enrollments = await Enrollment.find({ studentId: req.user.id })
+            .populate({
+                path: 'courseId',
+                populate: { path: 'teacherId', select: 'username' }
+            })
+            .lean();
+
+        const formatted = enrollments.map(e => ({
+            ...e,
+            id: e._id.toString(),
+            course: e.courseId ? {
+                ...e.courseId,
+                id: e.courseId._id.toString(),
+                teacher: e.courseId.teacherId ? { username: e.courseId.teacherId.username } : null
+            } : null
+        }));
+
+        res.json(formatted);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

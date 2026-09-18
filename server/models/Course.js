@@ -1,32 +1,52 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const Course = sequelize.define('Course', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true
-    },
+const courseSchema = new mongoose.Schema({
     title: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: String,
+        required: true,
+        trim: true
     },
     description: {
-        type: DataTypes.TEXT,
-        allowNull: true
+        type: String,
+        default: ''
     },
     thumbnailUrl: {
-        type: DataTypes.STRING,
-        allowNull: true
+        type: String,
+        default: ''
     },
     subject: {
-        type: DataTypes.STRING,
-        defaultValue: 'General'
+        type: String,
+        default: 'General'
+    },
+    teacherId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     }
 }, {
-    tableName: 'courses',
-    freezeTableName: true,
-    timestamps: true
+    timestamps: true,
+    toJSON: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    },
+    toObject: {
+        virtuals: true,
+        transform: (_doc, ret) => {
+            ret.id = ret._id ? ret._id.toString() : ret.id;
+            return ret;
+        }
+    }
 });
 
-module.exports = Course;
+// Virtual for teacher populated alias if needed
+courseSchema.virtual('teacher', {
+    ref: 'User',
+    localField: 'teacherId',
+    foreignField: '_id',
+    justOne: true
+});
+
+module.exports = mongoose.model('Course', courseSchema);
