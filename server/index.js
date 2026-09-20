@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 5000;
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
-    'https://ezy-edu-tube-education-only-online.vercel.app',
+    'https://ezyedutube.vercel.app',
     process.env.CLIENT_URL || 'http://localhost:5174',
     process.env.ADMIN_URL || 'http://localhost:5173',
     'http://localhost:5174',

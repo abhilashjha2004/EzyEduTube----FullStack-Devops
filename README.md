@@ -203,7 +203,7 @@ When deploying the backend on Render:
    - `MONGODB_URI`: Your MongoDB Atlas URI.
    - `JWT_SECRET`: Your production JWT secret.
    - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
-   - `CLIENT_URL`: `https://ezy-edu-tube-education-only-online.vercel.app`.
+   - `CLIENT_URL`: `https://ezyedutube.vercel.app`.
    - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`.
 2. Delete the old Railway MySQL variables (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL`) from the Render dashboard.
 
