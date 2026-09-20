@@ -180,13 +180,16 @@ const Home = () => {
                     <div className="relative z-10 max-w-2xl">
                         <div className="flex items-center gap-2 mb-3">
                             <Sparkles size={18} className="text-yellow-300" />
-                            <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wider">DevOps CI/CD Pipeline Active 🚀</span>
+                            <span className="text-sm font-semibold text-yellow-300 uppercase tracking-wider">LEARN. EXPLORE. GROW. ✨ 🚀</span>
                         </div>
                         <h1 className="text-3xl md:text-4xl font-extrabold mb-3 leading-tight">
-                            Learn Anything,<br />Anytime, Anywhere Abhilash Jha
+                            Learn Anything, Anytime, Anywhere with EzyEduTube
                         </h1>
+                        <h2 className="text-lg md:text-xl font-semibold text-white/90 mb-6">
+                            Welcome to EzyEduTube, Abhilash Jha's Learning Platform 🚀
+                        </h2>
                         <p className="text-white/80 text-sm mb-6 max-w-md">
-                            Discover thousands of educational videos from expert creators. Your knowledge journey starts here.
+                            Discover thousands of educational videos from expert creators.
                         </p>
                         <div className="flex gap-3 flex-wrap">
                             {user ? (
